@@ -37,7 +37,7 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     sigma2_sqrt = np.sqrt(sigma2)
     stv_m = np.diag(sigma2_sqrt)
     covar = stv_m @ corr @ stv_m  # 协方差矩阵
-    par = np.array([1, F, M/7, R/25, Vs/750])
+    par = np.array([1, F, M / 7, R / 25, Vs / 750])
     par = par.T
     v_miu = (beta @ par).T  # 平均值
     random.seed(1)  # 确保结果可以复现
@@ -54,18 +54,20 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
         theta4_cdf = pickle.load(file)
         theta5_cdf = pickle.load(file)
         theta6_cdf = pickle.load(file)
-    theta_cdf = {'theta1_cdf': theta1_cdf,
-                 'theta2_cdf': theta2_cdf,
-                 'theta3_cdf': theta3_cdf,
-                 'theta4_cdf': theta4_cdf,
-                 'theta5_cdf': theta5_cdf,
-                 'theta6_cdf': theta6_cdf}
+    theta_cdf = {
+        'theta1_cdf': theta1_cdf,
+        'theta2_cdf': theta2_cdf,
+        'theta3_cdf': theta3_cdf,
+        'theta4_cdf': theta4_cdf,
+        'theta5_cdf': theta5_cdf,
+        'theta6_cdf': theta6_cdf
+    }
     thetad = {}
     for i in range(6):
         cdf = []
         x = []
-        cdf = theta_cdf['theta%i_cdf' % (i+1)][:, 1]
-        x = theta_cdf['theta%i_cdf' % (i+1)][:, 0]
+        cdf = theta_cdf['theta%i_cdf' % (i + 1)][:, 1]
+        x = theta_cdf['theta%i_cdf' % (i + 1)][:, 0]
         thetai = []
         thetai = np.interp(p[:, i], cdf, x)
         if i == 0:
@@ -74,13 +76,13 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
             thetai = 2 * np.pi * thetai
         else:
             pass
-        thetad['theta%i' % (i+1)] = thetai
+        thetad['theta%i' % (i + 1)] = thetai
 
     # theta1: Ia; theta2: D_5-95; theta3: t_mid; theta4: w_mid; theta5: w'; theta6: kesi_f
 
     theta = np.zeros((num, 6))
     for i in range(6):
-        theta[:, i] = thetad['theta%i' % (i+1)]
+        theta[:, i] = thetad['theta%i' % (i + 1)]
 
     # 取出第i组参数
     i = 0
@@ -91,8 +93,9 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     t_45 = theta_i[2]
 
     def objective(params):
-        return (abs((gamma.ppf(0.95, params[0], scale=params[1])-gamma.ppf(0.05, params[0], scale=params[1]))-t_5_95) 
-                + abs(gamma.ppf(0.45, params[0], scale=params[1])-t_45))
+        return (abs((gamma.ppf(0.95, params[0], scale=params[1]) -
+                     gamma.ppf(0.05, params[0], scale=params[1])) - t_5_95) +
+                abs(gamma.ppf(0.45, params[0], scale=params[1]) - t_45))
 
     params0 = np.array([1, 1])
     result = minimize(objective, params0, method='Nelder-Mead')
@@ -101,9 +104,10 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     shape = params[0]
     scale = params[1]
 
-    alpha2 = (shape+1)/2
-    alpha3 = 1/(2*scale)
-    alpha1 = np.sqrt(theta_i[0] * (2 * alpha3)**(2 * alpha2 - 1) / math.gamma(2 * alpha2 - 1))
+    alpha2 = (shape + 1) / 2
+    alpha3 = 1 / (2 * scale)
+    alpha1 = np.sqrt(theta_i[0] * (2 * alpha3)**(2 * alpha2 - 1) /
+                     math.gamma(2 * alpha2 - 1))
 
     np.seterr(divide='ignore', invalid='ignore')
 
@@ -112,34 +116,38 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     ti = np.arange(0.01, tn + 0.01, 0.01)
     kesi_f = theta_i[5]
     dt = 0.01
-    acc = np.zeros(len(ti)+1)
+    acc = np.zeros(len(ti) + 1)
 
-    for t in np.arange(0, tn+0.01, 0.01):
-        q_t_alpha = alpha1 * t**(alpha2-1) * np.exp(-1 * alpha3 * t)
-        k = int(t/dt)
-        
+    for t in np.arange(0, tn + 0.01, 0.01):
+        q_t_alpha = alpha1 * t**(alpha2 - 1) * np.exp(-1 * alpha3 * t)
+        k = int(t / dt)
+
         # 计算su
         if k != 0:
-            id = np.arange(1, k+1)
+            id = np.arange(1, k + 1)
             uid = np.random.randn(k)
-            wfid = theta_i[3] + theta_i[4] * (ti[id-1]-theta_i[2])  # 计算ti下的wf值
-            hid = wfid/np.sqrt(1-kesi_f**2) * np.exp(-kesi_f*wfid*(t-ti[id-1])) * np.sin(wfid*np.sqrt(1-kesi_f**2)*(t-ti[id-1]))
+            wfid = theta_i[3] + theta_i[4] * (ti[id - 1] - theta_i[2]
+                                              )  # 计算ti下的wf值
+            hid = wfid / np.sqrt(1 - kesi_f**2) * np.exp(
+                -kesi_f * wfid *
+                (t - ti[id - 1])) * np.sin(wfid * np.sqrt(1 - kesi_f**2) *
+                                           (t - ti[id - 1]))
             hjd2 = hid**2
             fm = np.sqrt(np.sum(hjd2))
-            su = np.sum((hid/fm*uid))
+            su = np.sum((hid / fm * uid))
             acc[k] = q_t_alpha * su
         else:
             acc[k] = 0
 
     # high pass filter
-    xt = np.arange(0, tn+0.01, 0.01)
+    xt = np.arange(0, tn + 0.01, 0.01)
     x = acc
     x[np.isnan(x)] = 0
 
     def myode(y, t, x, xt):
         wc = 0.1 * 2 * np.pi
         a = np.interp(t, xt, x)
-        dydt = [y[1], a-2 * wc * y[1] - wc**2 * y[0]]
+        dydt = [y[1], a - 2 * wc * y[1] - wc**2 * y[0]]
         return dydt
 
     y0 = [0, 0]
