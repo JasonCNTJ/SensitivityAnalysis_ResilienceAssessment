@@ -3,7 +3,7 @@
 
 from openseespy.opensees import ops
 import numpy as np
-from Functions import NodesAroundPanelZone, CreateIMKMaterial
+from Functions import NodesAroundPanelZone, CreateIMKMaterial, SectionProperty
 
 
 def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
@@ -240,8 +240,63 @@ def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
     print('Column hinge materials are defined!')
 
     ################ Define beam elements ################
+    # Define beam section sizes
+    SectionDatabase = pd.read_csv(
+        r'C:\Users\12734\OneDrive\重要文件\可参考文件\AutoSDAPlatform-master\AutoSDAPlatform-master\AllSectionDatabase.csv')
+    for i in range(2, n_story + 2):
+        BeamInfo = SectionProperty(
+            building.member_size['beam'][i-2], SectionDatabase)
+        for j in range(1, n_Xbay + 1):
+            beamElementTag = int('%i%i%i%i%i%i%i' %
+                                 (2, j, i, 1, j+1, i, 1))  # Beam element tag
+            startNode = int('%i%i%i%i' % (j, i, 1, 5))
+            endNode = int('%i%i%i%i' % (j+1, i, 1, 3))
+            ModifiedMI = (n + 1.0) / n * (BeamInfo['Ix'])
+            ops.element('elasticBeamColumn', beamElementTag, startNode,
+                        endNode, BeamInfo['A'], Es, ModifiedMI, LinearTransf)
+
+        # Truss elements connecting frame and leaning column
+        trussElementTag = int('%i%i%i%i%i%i' %
+                              (2, n_Xbay+1, i, 1, n_Xbay+2, i))
+        startNode = int('%i%i%i%i' % (n_Xbay + 1, i, 1, 1))
+        endNode = int('%i%i' % (n_Xbay+2, i))
+        ops.element('Truss', trussElementTag, startNode,
+                    endNode, AreaRigid, TrussMatID)
+        print('Beams are defined!')
 
     ################ Define column elements ################
+    # Define exterior section sizes
+    for i in range(1, n_story + 1):
+        ExteriorColumn = SectionProperty(
+            building.member_size['exterior column'][i-1], SectionDatabase)
+        InteriorColumn = SectionProperty(
+            building.member_size['interior column'][i-1], SectionDatabase)
+        for j in range(1, n_Xbay+2):
+            columnElementTag = int('%i%i%i%i%i%i%i' % (3, j, i, 1, j, i+1, 1))
+            startNode = int('%i%i%i%i' % (j, i, 1, 4))
+            endNode = int('%i%i%i%i' % (j, i+1, 1, 6))
+            # Determine whether the column is interior or exterior column
+            # this would affect the column section size
+            if 1 < j < building.geometry['number of X bay'] + 1:
+                Column = InteriorColumn
+            else:
+                Column = ExteriorColumn
+            ModifiedMI = (n + 1.0) / n * Column['Ix']
+            ops.element('elasticBeamColumn', columnElementTag, startNode,
+                        endNode, Column['A'], Es, ModifiedMI, PDeltaTransf)
+
+        # Leaning column elements
+        if i == 1:
+            leaningElementTag = int('%i%i%i%i%i%i' % (3, n_Xbay + 2, i, n_Xbay + 2, i+1, 2))
+            startNode = int('%i%i', (n_Xbay+2, i))
+            endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
+        else:
+            leaningElementTag = int('%i%i%i%i%i%i%i' % (3, n_Xbay + 2, i, 4, n_Xbay + 2, i+1, 2))
+            startNode = int('%i%i%i', (n_Xbay+2, i, 4))
+            endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
+        ops.element('elasticBeamColumn', leaningElementTag, startNode, 
+                    endNode, AreaRigid, Es, IRigid, PDeltaTransf)
+        print('Columns are defined!')
 
     ################ Define beam hinges ################
 

@@ -1,5 +1,7 @@
 # Define functions and procedures
 import openseespy.opensees as ops
+import numpy as np
+import sys
 
 
 ################ Function: NodesAroundPanelZone ################
@@ -87,9 +89,8 @@ def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
         if no_Pier != MaximumCol:
             ops.node(nodetag15, Xc + dc, Yc)
 
+
 ################ Function: CreateIMKMaterial ################
-
-
 def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, residual, theta_u):
     # Input argument explanation:
     # matTag: a unique ID to represent the material
@@ -138,3 +139,23 @@ def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, resid
                          Lambda_S, Lambda_C, Lambda_A, Lambda_K, 1.0, 1.0, 1.0, 1.0,
                          theta_p, theta_p, theta_pc, theta_pc, residual, residual,
                          theta_u, theta_u, 1.0, 1.0)
+
+
+################ Function: SectionProperty ################
+def SectionProperty(target_size, sectionDataBase):
+    """
+    This function is used to obtain the section property when section size is given.
+    The output will be stored in a dictionary.
+    :params target_size: a string which defines section size, e.g. 'W14X500'
+    :param sectionDataBaseFile: a dataframe read from .csv file
+    :return: section_info: a dictionary which includes section size, index, and associated properties
+    """
+    try:
+        for indx in np.array(sectionDataBase['index']):
+            if target_size == sectionDataBase.loc[indx, 'section size']:
+                section_info = sectionDataBase.loc[indx, :]
+        return section_info.to_dict()
+    except:
+        sys.stderr.write(
+            'Error: wrong size nominated!\nNo such size exists in section database!')
+        sys.exit(1)
