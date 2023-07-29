@@ -78,5 +78,9 @@
     "throttleTime": 60000,
     "functionParamAddStr": "",
     "NoMatchParams": "no show param"
-  }
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
+  "python.formatting.provider": "none"
 }

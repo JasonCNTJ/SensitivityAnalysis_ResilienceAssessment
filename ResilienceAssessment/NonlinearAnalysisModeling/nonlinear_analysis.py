@@ -3,7 +3,7 @@
 
 from openseespy.opensees import ops
 import numpy as np
-from Functions import NodesAroundPanelZone
+from Functions import NodesAroundPanelZone, CreateIMKMaterial
 
 
 def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
@@ -140,37 +140,127 @@ def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
             pass
     print('Extra nodes for leaning column springs defined!')
 
+    ################ Define node fixities ################
+    # Define the fixity at all column
+    for j in range(1, n_Xbay + 2):
+        nodetag = int('%i%i%i%i' % (j, 1, 1, 0))
+        ops.fix(nodetag, 1, 1, 1)
+    # Leaning column base
+    nodetag = int('%i%i' % (n_Xbay + 2, 1))
+    ops.fix(nodetag, 1, 1, 0)
+    print('All column base fixities are defined!')
 
-################ Define node fixities ################
+    ################ Define floor constraint ################
+    # Define floor constraint
+    # Nodes at same floor level have identical lateral displacement
+    # Select mid right node of each panel zone as the constrained node
+    ConstrainDOF = 1  # X-direction
+    for i in range(2, n_story + 2):
+        nodetag1 = ('1%i11' % (i))  # Pier 1
+        for j in range(1, n_Xbay + 2):
+            nodetag2 = ('%i%i11' % (j, i))  # Pier j
+            ops.equalDOF(nodetag1, nodetag2, ConstrainDOF)
+        # Include the leaning column nodes to floor constraint
+        nodetag3 = ('%i%i' % (n_Xbay + 2, i))
+        ops.equalDOF(nodetag1, nodetag3, ConstrainDOF)
+    print('Floor constraints are defined!')
 
-################ Define floor constraint ################
+    ################ Define beam hinge material models ################
+    # Define all beam plastic hinge materials using Modified IMK material model
+    material_tag = 70001
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 1):
+            # Tag, K0, As, My, Lambda, ThetaP, ThetaPc, Residual, ThetaU
+            BeamHingeMaterialLevelBaySet = np.zeros([9])
+            BeamHingeMaterialLevelBaySet[0] = material_tag
+            BeamHingeMaterialLevelBaySet[1] = beams[i -
+                                                    2][j-1].plastic_hinge['K0']
+            BeamHingeMaterialLevelBaySet[2] = beams[i -
+                                                    2][j-1].plastic_hinge['as']
+            BeamHingeMaterialLevelBaySet[3] = beams[i -
+                                                    2][j-1].plastic_hinge['My']
+            BeamHingeMaterialLevelBaySet[4] = beams[i -
+                                                    2][j-1].plastic_hinge['Lambda']
+            BeamHingeMaterialLevelBaySet[5] = beams[i -
+                                                    2][j-1].plastic_hinge['theta_p']
+            BeamHingeMaterialLevelBaySet[6] = beams[i -
+                                                    2][j-1].plastic_hinge['theta_pc']
+            BeamHingeMaterialLevelBaySet[7] = beams[i -
+                                                    2][j-1].plastic_hinge['residual']
+            BeamHingeMaterialLevelBaySet[8] = beams[i -
+                                                    2][j-1].plastic_hinge['theta_u']
+            CreateIMKMaterial(BeamHingeMaterialLevelBaySet[0],
+                              BeamHingeMaterialLevelBaySet[1],
+                              n,
+                              BeamHingeMaterialLevelBaySet[2],
+                              BeamHingeMaterialLevelBaySet[3],
+                              BeamHingeMaterialLevelBaySet[4],
+                              BeamHingeMaterialLevelBaySet[5],
+                              BeamHingeMaterialLevelBaySet[6],
+                              BeamHingeMaterialLevelBaySet[7],
+                              BeamHingeMaterialLevelBaySet[8])
+            material_tag += 1
+    print('Beam hinge materials defined!')
 
-################ Define beam hinge material models ################
+    ################ Define column hinge material models ################
+    # Define column hinge material models
+    material_tag = 60001
+    for i in range(1, n_story + 1):
+        for j in range(1, n_Xbay + 2):
+            # Tag, K0, As, My, Lambda, ThetaP, ThetaPc, Residual, ThetaU
+            ColumnHingeMaterialLevelBaySet = np.zeros([9])
+            ColumnHingeMaterialLevelBaySet[0] = material_tag
+            ColumnHingeMaterialLevelBaySet[1] = columns[i -
+                                                        1][j-1].plastic_hinge['K0']
+            ColumnHingeMaterialLevelBaySet[2] = columns[i -
+                                                        1][j-1].plastic_hinge['as']
+            ColumnHingeMaterialLevelBaySet[3] = columns[i -
+                                                        1][j-1].plastic_hinge['My']
+            ColumnHingeMaterialLevelBaySet[4] = columns[i -
+                                                        1][j-1].plastic_hinge['Lambda']
+            ColumnHingeMaterialLevelBaySet[5] = columns[i -
+                                                        1][j-1].plastic_hinge['theta_p']
+            ColumnHingeMaterialLevelBaySet[6] = columns[i -
+                                                        1][j-1].plastic_hinge['theta_pc']
+            ColumnHingeMaterialLevelBaySet[7] = columns[i -
+                                                        1][j-1].plastic_hinge['residual']
+            ColumnHingeMaterialLevelBaySet[8] = columns[i -
+                                                        1][j-1].plastic_hinge['theta_u']
+            CreateIMKMaterial(ColumnHingeMaterialLevelBaySet[0],
+                              ColumnHingeMaterialLevelBaySet[1],
+                              n,
+                              ColumnHingeMaterialLevelBaySet[2],
+                              ColumnHingeMaterialLevelBaySet[3],
+                              ColumnHingeMaterialLevelBaySet[4],
+                              ColumnHingeMaterialLevelBaySet[5],
+                              ColumnHingeMaterialLevelBaySet[6],
+                              ColumnHingeMaterialLevelBaySet[7],
+                              ColumnHingeMaterialLevelBaySet[8])
+            material_tag += 1
+    print('Column hinge materials are defined!')
 
-################ Define column hinge material models ################
+    ################ Define beam elements ################
 
-################ Define beam elements ################
+    ################ Define column elements ################
 
-################ Define column elements ################
+    ################ Define beam hinges ################
 
-################ Define beam hinges ################
+    ################ Define column hinges ################
 
-################ Define column hinges ################
+    ################ Define masses ################
 
-################ Define masses ################
+    ################ Define elements in panel zone ################
 
-################ Define elements in panel zone ################
+    ################ Define springs in panel zone ################
 
-################ Define springs in panel zone ################
+    ################ Define gravity loads ################
 
-################ Define gravity loads ################
+    ################ Define gravity analysis ################
 
-################ Define gravity analysis ################
+    ################ Define damping ################
 
-################ Define damping ################
+    ################ Define ground motion scale factor ################
 
-################ Define ground motion scale factor ################
+    ################ Define Time History ################
 
-################ Define Time History ################
-
-print('Analysis Completed!')
+    print('Analysis Completed!')

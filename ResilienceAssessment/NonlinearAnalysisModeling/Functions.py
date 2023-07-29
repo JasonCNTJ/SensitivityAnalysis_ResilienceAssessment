@@ -13,7 +13,7 @@ def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
     :params PanelSize: a list with two elements [a, b]
                         a: the depth of column
                         b: the depth of beam
-    
+
     # Node Label Convention:
     # Pier number_Level_Position ID
     # Pier number: 1,2,3,4... used to indicate which column pier;
@@ -86,3 +86,55 @@ def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
             ops.node(nodetag13, Xc - dc, Yc)
         if no_Pier != MaximumCol:
             ops.node(nodetag15, Xc + dc, Yc)
+
+################ Function: CreateIMKMaterial ################
+
+
+def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, residual, theta_u):
+    # Input argument explanation:
+    # matTag: a unique ID to represent the material
+    # K0: Initial stiffness of beam component before the modification of n
+    #     i.e., 6*E*Iz/L where E, Iz, and L are Young's modulus, moment of inertia, and length of beam
+    # n: a coefficient which is equal to 10 based on reference suggestion
+    # a_men: strain hardening ratio before modification of n
+    # My: effective yield strength, slightly greater than predicted bending strength, which is Fy*Z.
+    # Lambda: reference cumulative plastic rotation
+    # theta_p: pre-capping plastic rotation
+    # theta_pc: post-capping plastic rotation
+    # residual: residual strength ratio
+    # theta_u: ultimate rotation.
+    # Reference:
+    #           [1] Ibarra et al. (2005) Hysteretic models that incorporate strength and stiffness deterioration.
+    #           [2] Ibarra and Krawinkler. (2005)  Global collapse of frame structures under seismic excitation.
+    #           [3] Lignos (2008) Sidesway collapse of deteriorating structural systems under seismic excitation.
+    #           [4] Lignos and Krawinkler. (2011) Deterioration modeling of steel component in support of collapse prediction of
+    #                                         steel moment frames under earthquake loading.
+    # [5] Lignos et al. (2019) Proposed updates to the ASCE 41 nonlinear modeling parameters for wide-flange steel
+    # columns in support performance-based seismic engineering.
+    Ks = (n + 1.0) * K0  # Initial stiffness for rotational spring (hinge)
+    asPosScaled = a_men / (1.0 + n * (1.0 - a_men))
+    asNegScaled = asPosScaled
+    Lambda_S = (0.0 + 1.0) * Lambda  # basic strength deterioration
+    Lambda_C = (0.0 + 1.0) * Lambda  # post-capping strength deterioration
+    # accelerated reloading stiffness deterioration (a very large number = no cyclic deterioration)
+    Lambda_A = (0.0 + 1.0) * Lambda
+    # unloading stiffness deterioration (a very large number = no cyclic deterioration)
+    Lambda_K = (0.0 + 1.0) * Lambda
+    # Built-in command:
+    # (OpenSees: Tcl)
+    # uniaxialMaterial Bilin $matTag $K0 $as_Plus $as_Neg $My_Plus $My_Neg $Lambda_S $Lambda_C $Lambda_A $Lambda_K
+    #                       $c_S $c_C $c_A $c_K $theta_p_Plus $theta_p_Neg $theta_pc_Plus $theta_pc_Neg $Res_Pos $Res_Neg
+    #                       $theta_u_Plus $theta_u_Neg $D_Plus $D_Neg
+    # Argument explanation:
+    # http://opensees.berkeley.edu/wiki/index.php/Modified_Ibarra-Medina-Krawinkler_Deterioration_Model_with_Bilinear_Hysteretic_Response_(Bilin_Material)
+    # (OpenSeesPy: Python)
+    # uniaxialMaterial('Bilin', matTag, K0, as_Plus, as_Neg, My_Plus, My_Neg, Lamda_S, Lamda_C, Lamda_A, Lamda_K,
+    #                   c_S, c_C, c_A, c_K, theta_p_Plus, theta_p_Neg, theta_pc_Plus, theta_pc_Neg, Res_Pos, Res_Neg,
+    #                   theta_u_Plus, theta_u_Neg, D_Plus, D_Neg, nFactor=0.0)
+    # Argument explanation:
+    # https://openseespydoc.readthedocs.io/en/latest/src/Bilin.html
+    # Create the modified Ibarra-Medina-Krawinkler material model
+    ops.uniaxialMaterial('Bilin', matTag, Ks, asPosScaled, asNegScaled, My, -My,
+                         Lambda_S, Lambda_C, Lambda_A, Lambda_K, 1.0, 1.0, 1.0, 1.0,
+                         theta_p, theta_p, theta_pc, theta_pc, residual, residual,
+                         theta_u, theta_u, 1.0, 1.0)
