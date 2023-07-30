@@ -6,6 +6,7 @@ import numpy as np
 from Functions import NodesAroundPanelZone, CreateIMKMaterial, SectionProperty
 from Functions import rotBeamSpring, rotColumnSpring, rotLeaningCol, elemPanelZone2D, rotPanelZone2D
 import math
+import pandas as pd
 
 
 def NonlinearAnalysis(building, columns, beams):
@@ -300,7 +301,7 @@ def NonlinearAnalysis(building, columns, beams):
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         ops.element('elasticBeamColumn', leaningElementTag, startNode,
                     endNode, AreaRigid, Es, IRigid, PDeltaTransf)
-        print('Columns are defined!')
+    print('Columns are defined!')
 
     ################ Define beam hinges ################
     # Create beam hinge element (rotational spring)
