@@ -5,6 +5,8 @@ import sys
 
 
 ################ Function: NodesAroundPanelZone ################
+
+
 def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
                          MaximumCol):
     """
@@ -91,6 +93,8 @@ def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
 
 
 ################ Function: CreateIMKMaterial ################
+
+
 def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, residual, theta_u):
     # Input argument explanation:
     # matTag: a unique ID to represent the material
@@ -142,6 +146,8 @@ def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, resid
 
 
 ################ Function: SectionProperty ################
+
+
 def SectionProperty(target_size, sectionDataBase):
     """
     This function is used to obtain the section property when section size is given.
@@ -159,3 +165,184 @@ def SectionProperty(target_size, sectionDataBase):
         sys.stderr.write(
             'Error: wrong size nominated!\nNo such size exists in section database!')
         sys.exit(1)
+
+################ Function: rotBeamSpring ################
+
+
+def rotBeamSpring(eleID, nodeR, nodeC, matID, stiffMatID):
+    """
+    Create a zero length element to represent the beam hinge
+    Axial stiffness is extremely large
+    Flexural stiffness is defined by Modified IMK material
+    Input argument explanation:
+    :params eleID: a unique ID to label the element
+    :params nodeR: master node
+    :params nodeC: slave node
+    :params matID: the associated modified IMK material ID
+    :params stiffMatID: the ID associated with the stiff material (defined in 'Variables')
+    1,2,3 - translation along local x,y,z axes, respectively;
+    4,5,6 - rotation about local x,y,z axes, respectively
+    If the optional orientation vectors are not specified, the local element axes
+    coincide with the global axes. Otherwise the local z-axis is defined by the
+    cross product between the vectors x and yp vectors specified on the command line.
+    """
+
+    ops.element('zeroLength', eleID, nodeR, nodeC, '-mat', stiffMatID,
+                stiffMatID, matID, '-dir', 1, 2, 6, '-orient', 1, 0, 0, 0, 1, 0)
+
+################ Function: rotColumnSpring ################
+
+
+def rotColumnSpring(eleID, nodeR, nodeC, matID, stiffMatID):
+    """
+    Create a zero length element to represent the column hinge
+    Axial stiffness is extremely large
+    Flexural stiffness is defined by Modified IMK material
+    Input argument explanation:
+    :params eleID: a unique ID to label the element
+    :params nodeR: master node
+    :params nodeC: slave node
+    :params matID: the associated modified IMK material ID
+    :params stiffMatID: the ID associated with the stiff material (defined in 'Variables')
+    1,2,3 - translation along local x,y,z axes, respectively;
+    4,5,6 - rotation about local x,y,z axes, respectively
+    If the optional orientation vectors are not specified, the local element axes
+    coincide with the global axes. Otherwise the local z-axis is defined by the
+    cross product between the vectors x and yp vectors specified on the command line.
+    """
+    ops.element('zeroLength', eleID, nodeR, nodeC, '-mat', stiffMatID,
+                stiffMatID, matID, '-dir', 1, 2, 6, '-orient', 0, 1, 0, 1, 0, 0)
+
+################ Function: rotLeaningCol ################
+
+
+def rotLeaningCol(eleID, nodeR, nodeC, stiffMatID):
+    """
+    Create a zero-stiffness elastic rotational spring for the leaning column
+    while constraining the translational DOFs
+    Argument explanation:
+    :params eleID: unique element ID for the zero-stiffness rotational spring
+    :params nodeR: ID of node which will be retained by multi-point constraint
+    :params nodeC: ID of node which will be constrained by multi-point constraint
+    """
+
+    # Spring stiffness: very small number (not using zero) to avoid numerical convergence issuse
+    K = 1e-9
+
+    # Create the material and zero length element (spring)
+    ops.uniaxialMaterial('Elastic', eleID,  K)
+    ops.element('zeroLength', eleID, nodeR, nodeC, '-mat', stiffMatID,
+                stiffMatID, eleID, '-dir', 1, 2, 6, '-orient', 0, 1, 0, 1, 0, 0)
+
+################ Function: elemPanelZone2D ################
+
+
+def elemPanelZone2D(eleID, nodeR, E, VerTransfTag, HorTransfTag):
+    """
+    Formal arguments
+    eleID     - unique element ID for the zero-length rotational spring
+    nodeR     - node ID for first point (top left) of panel zone --> this node creates all the others
+    E         - Young's modulus
+    G         - Shear modulus
+    S_la      - Large number for J
+    A_PZ      - area of rigid link that creates the panel zone
+    I_PZ      - moment of inertia of Rigid link that creates the panel zone
+    transfTag - geometric transformation
+    """
+    # define panel zone nodes
+    node01 = nodeR  # top left of joint
+    node02 = node01 + 1  # top left of joint
+    node03 = node01 + 2  # top right of joint
+    node04 = node01 + 3  # top right of joint
+    node05 = node01 + 4  # btm right of joint
+    node06 = node01 + 5  # btm right of joint
+    node07 = node01 + 6  # btm left
+    node08 = node01 + 7  # btm left
+    node09 = node01 + 8  # mid left
+    node10 = node01 + 9  # top center
+    node11 = node01 + 10  # mid right
+    node12 = node01 + 11  # btm center
+    
+    # create element IDs as a function of first input eleID (8 per panel zone)
+    x1 = eleID  # top : left element
+    x2 = x1 + 1  # top : right element
+    x3 = x1 + 2  # right : top element
+    x4 = x1 + 3  # right : btm element
+    x5 = x1 + 4  # btm : right element
+    x6 = x1 + 5  # btm : left element
+    x7 = x1 + 6  # left : btm element
+    x8 = x1 + 7  # left : top element
+    
+    A_PZ = 1.0e12  # area of panel zone element (make much larger than A of frame elements)
+    Ipz = 1.0e12  # moment of inertia of panel zone element (make much larger tha I of frame elements)
+    
+    # create panel zone elements
+    ops.element('elasticBeamColumn', x1, node02, node10, A_PZ, E, Ipz, HorTransfTag)
+    ops.element('elasticBeamColumn', x2, node10, node03, A_PZ, E, Ipz, HorTransfTag)
+    ops.element('elasticBeamColumn', x3, node04, node11, A_PZ, E, Ipz, VerTransfTag)
+    ops.element('elasticBeamColumn', x4, node11, node05, A_PZ, E, Ipz, VerTransfTag)
+    ops.element('elasticBeamColumn', x5, node06, node12, A_PZ, E, Ipz, HorTransfTag)
+    ops.element('elasticBeamColumn', x6, node12, node07, A_PZ, E, Ipz, HorTransfTag)
+    ops.element('elasticBeamColumn', x7, node08, node09, A_PZ, E, Ipz, VerTransfTag)
+    ops.element('elasticBeamColumn', x8, node09, node01, A_PZ, E, Ipz, VerTransfTag)
+
+################ Function: rotPanelZone2D ################
+
+
+def rotPanelZone2D(eleID, nodeR, nodeC, E, Fy, dc, bf_c, tf_c, tp, db, Ry, As):
+    """
+    Procedure that creates a rotational spring and constrains the corner nodes of a panel zone
+    :params eleID: unique element ID for this zero length rotational spring
+    :params nodeR: node ID which will be retained by the multi-point constraint, top right of panel zone
+    :params nodeC: node ID which will be constrained by the multi-point constraint, top right of panel zone
+    :params E: modulus of elasticity
+    :params Fy: yield strength
+    :params dc: column depth
+    :params bf_c: column flange width
+    :params tf_c: column flange thickness
+    :params tp: panel zone thickness
+    :params db: beam depth
+    :params Ry: expected value for yield strength --> Typical value is 1.2
+    :params as: assumed strain hardening
+    """
+    # Trilinear Spring
+    # Yield Shear
+    Vy = 0.55 * Fy * dc * tp
+    # Shear Modulus
+    G = E / (2.0 * (1.0 + 0.30))
+    # Elastic Stiffness
+    Ke = 0.95 * G * tp * dc
+    # Plastic Stiffness
+    Kp = 0.95 * G * bf_c * (tf_c * tf_c) / db
+    
+    # Define Trilinear Equivalent Rotational Spring
+    # Yield point for Trilinear Spring at gamma1_y
+    gamma1_y = Vy / Ke
+    M1y = gamma1_y * (Ke * db)
+    # Second point for trilinear spring at 4 * gamma1_y
+    gamma2_y = 4.0 * gamma1_y
+    M2y = M1y + (Kp * db) * (gamma2_y - gamma1_y)
+    # Third point for trilinear spring at 100 * gamma1_y
+    gamma3_y = 100.0 * gamma1_y
+    M3y = M2y + (As * Ke * db) * (gamma3_y - gamma2_y)
+    
+    # Hysteretic Material without pinching and damage (same mat ID as ELe ID)
+    ops.uniaxialMaterial('Hysteretic', eleID, M1y, gamma1_y, M2y, gamma2_y, M3y, gamma3_y,
+                         -M1y, -gamma1_y, -M2y, -gamma2_y, -M3y, -gamma3_y,
+                         1, 1, 0.0, 0.0, 0.0)
+    ops.element('zeroLength', eleID, nodeR, nodeC, '-mat', eleID, '-dir', 6)
+    ops.equalDOF(nodeR, nodeC, 1, 2)
+    # Constrain the translational DOF with a multi-point constraint
+    # Left Top Corner of PZ
+    nodeR_1 = nodeR - 2
+    nodeR_2 = nodeR_1 + 1
+    # Right Bottom Corner of PZ
+    nodeR_5 = nodeR + 2
+    nodeR_6 = nodeR_5 + 1
+    # Left bottom corner
+    nodeR_7 = nodeR + 4
+    nodeR_8 = nodeR_7 + 1
+    # Retained constrained DOF_1 DOF_2
+    ops.equalDOF(nodeR_1, nodeR_2, 1, 2)
+    ops.equalDOF(nodeR_5, nodeR_6, 1, 2)
+    ops.equalDOF(nodeR_7, nodeR_8, 1, 2)

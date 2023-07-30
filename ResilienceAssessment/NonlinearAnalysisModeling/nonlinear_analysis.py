@@ -4,9 +4,11 @@
 from openseespy.opensees import ops
 import numpy as np
 from Functions import NodesAroundPanelZone, CreateIMKMaterial, SectionProperty
+from Functions import rotBeamSpring, rotColumnSpring, rotLeaningCol, elemPanelZone2D, rotPanelZone2D
+import math
 
 
-def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
+def NonlinearAnalysis(building, columns, beams):
     """
     This function is used to establish the NonlinearAnalysis Model and return
     the required response.
@@ -287,35 +289,172 @@ def NonlinearAnalysis(building, columns, beams, joints, analysis_type):
 
         # Leaning column elements
         if i == 1:
-            leaningElementTag = int('%i%i%i%i%i%i' % (3, n_Xbay + 2, i, n_Xbay + 2, i+1, 2))
+            leaningElementTag = int('%i%i%i%i%i%i' % (
+                3, n_Xbay + 2, i, n_Xbay + 2, i+1, 2))
             startNode = int('%i%i', (n_Xbay+2, i))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         else:
-            leaningElementTag = int('%i%i%i%i%i%i%i' % (3, n_Xbay + 2, i, 4, n_Xbay + 2, i+1, 2))
+            leaningElementTag = int('%i%i%i%i%i%i%i' % (
+                3, n_Xbay + 2, i, 4, n_Xbay + 2, i+1, 2))
             startNode = int('%i%i%i', (n_Xbay+2, i, 4))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
-        ops.element('elasticBeamColumn', leaningElementTag, startNode, 
+        ops.element('elasticBeamColumn', leaningElementTag, startNode,
                     endNode, AreaRigid, Es, IRigid, PDeltaTransf)
         print('Columns are defined!')
 
     ################ Define beam hinges ################
+    # Create beam hinge element (rotational spring)
+    # Define beam hinges using rotational spring with modified IMK material
+    material_tag = 70001
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 1):
+            beamSpringTagL = int('%i%i%i%i%i%i%i' % (7, j, i, 1, 1, 1, 5))
+            # node on mid right of panel zone
+            nodeRL = int('%i%i%i%i' % (j, i, 1, 1))
+            # node on left end of beam element
+            nodeCL = int('%i%i%i%i' % (j, i, 1, 5))
+            rotBeamSpring(beamSpringTagL, nodeRL, nodeCL, material_tag)
+            
+            beamSpringTagR = int('%i%i%i%i%i%i%i' % (7, j+1, i, 0, 9, 1, 3))
+            # node on mid left of panel zone
+            nodeRR = int('%i%i%i%i' % (j+1, i, 0, 9))
+            # node on right end of beam element
+            nodeCR = int('%i%i%i%i' % (j+1, i, 1, 3))
+            rotBeamSpring(beamSpringTagR, nodeRR, nodeCR, material_tag, StiffMatID)
+            material_tag += 1
+    print('Beam hinges are defined!')
+
 
     ################ Define column hinges ################
+    # Create column hinge element (rotational spring)
+    # Define column hinges using rotational spring with modified IMK material
+    material_tag = 60001
+    for i in range(1, n_story+1):
+        for j in range(1, n_Xbay + 2):
+            columnSpringTagB = int('%i%i%i%i%i%i%i' % (6, j, i, 1, 0, 1, 4))
+            # node on the top mid of panel zone or ground motion
+            nodeRB = int('%i%i%i%i' % (j, i, 1, 0))
+            # node on the bottom of the column
+            nodeCB = int('%i%i%i%i' % (j, i, 1, 4))
+            rotColumnSpring(columnSpringTagB, nodeRB, nodeCB, material_tag, StiffMatID)
+
+            columnSpringTagT = int('%i%i%i%i%i%i%i' % (6, j, i + 1, 1, 2, 1, 6))
+            # node on the btm mid of panel zone or ground motion
+            nodeRT = int('%i%i%i%i' % (j, i + 1, 1, 2))
+            # node on the top of the column
+            nodeCT = int('%i%i%i%i' % (j, i + 1, 1, 6))
+            rotColumnSpring(columnSpringTagT, nodeRT, nodeCT, material_tag, StiffMatID)
+            material_tag += 1
+
+    # Rotational spring for leaning column
+    for i in range(2, n_story + 2):
+        # write the springs below floor level i
+        leaningSpringTagB = int('%i%i%i%i%i%i' % (6, n_Xbay + 2, i, 
+                                                    n_Xbay + 2, i, 2))
+        nodeRLB = int('%i%i' % (n_Xbay + 2, i))
+        nodeCLB = int('%i%i%i' % (n_Xbay + 2, i, 2))
+        rotLeaningCol(leaningSpringTagB, nodeRLB, nodeCLB, StiffMatID)
+        
+        # write the springs above floor level i
+        # If it is roof, no springs above the roof
+        if i < n_story + 1:
+            leaningSpringTagT = int('%i%i%i%i%i%i' % (6, n_Xbay + 2, i, 
+                                                    n_Xbay + 2, i, 4))
+            nodeRLT = int('%i%i' % (n_Xbay + 2, i))
+            nodeCLT = int('%i%i%i' % (n_Xbay + 2, i, 4))
+            rotLeaningCol(leaningSpringTagT, nodeRLT, nodeCLT, StiffMatID)
+        else:
+            pass
+            
+    print('Column hinge are defined!')
+
 
     ################ Define masses ################
+    # Define all nodal masses
+    # Define floor weights and each nodal mass
+    FrameTributaryMassRatio = 1.0 / building.geometry['number of X LFRS']
+    TotalNodesPerFloor = n_Xbay + 2
+    for i in range(2, n_story + 2):
+        FloorWeight = building.gravity_loads['floor weight'][i-2]
+        # Mass along X direction
+        NodalMassFloor = FloorWeight * FrameTributaryMassRatio / TotalNodesPerFloor / g
+        
+        # Write nodal masses for each floor level
+        for j in range(1, n_Xbay + 2):
+            nodetag = int('%i%i%i%i' % (j, i, 1, 1))
+            ops.mass(nodetag, NodalMassFloor, Negligible, Negligible)
+    print('Nodal mass are defined!')
+
 
     ################ Define elements in panel zone ################
+    # Define elements in panel zones
+    # Procedures used to produce panel zone elements:
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 2):
+            eleTag = int('%i%i%i%i%i%i' % (8, 0, 0, j, i, 1))
+            nodeR = int('%i%i%i%i' % (j, i, 0, 1))
+            elemPanelZone2D(eleTag, nodeR, Es, PDeltaTransf, LinearTransf)
+    print('Panel zone elements are defined!')
 
     ################ Define springs in panel zone ################
+    # Define the springs involved in panel zones
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 2):
+            eleID = int('%i%i%i%i%i%i' % (9, j, i, 1, 0, 0))
+            nodeR = int('%i%i%i%i' % (j, i, 0, 3))
+            nodeC = int('%i%i%i%i' % (j, i, 0, 4))
+            dc = columns[i-2][j-1].section['d']
+            bf_c = columns[i-2][j-1].section['bf']
+            tf_c = columns[i-2][j-1].section['tf']
+            tw = columns[i-2][j-1].section['tw']  # doubler plate thickness is not considered
+            if j != n_Xbay + 1:
+                db = beams[i-2][j-1].section['d']
+            else:
+                db = beams[i-2][-1].section['d']  # ?
+            rotPanelZone2D(eleID, nodeR, nodeC, Es, Fy, dc, bf_c, tf_c, tw, db, 1.1, 0.03)
 
     ################ Define gravity loads ################
+    # Define expected gravity loads
+    ts_tag = 1
+    ops.timeSeries('Constant',ts_tag)
+    ops.pattern('Plain', 104, ts_tag)
+    for i in range(2, n_story + 2):
+        # Convert the unit from lb/ft to kip/inch
+        # Assign the beam dead load values (kip / inch)
+        BeamDeadLoadFloor = building.gravity_loads['beam dead load'][i-2] * 0.001 / 12
+        # Assign the beam live load values
+        BeamLiveLoadFloor = building.gravity_loads['beam live load'][i-2] * 0.001 / 12
+        # Assign the point load acting on leaning column
+        LeaningColumnDeadLoadFloor = building.gravity_loads['leaning column dead load'][i-2]
+        # Assign the point live load acting on leaning column
+        LeaningColumnLiveLoadFloor = building.gravity_loads['leaning column live load'][i-2]
+        # Define the load pattern in Opensees
+        # Define uniform loads on beams
+        # Load combinations:
+        # 104 Expected gravity loads: 1.05 DL + 0.25 LL
+        for j in range(1, n_Xbay + 1):
+            beamElementTag = int('%i%i%i%i%i%i%i' % (2, j, i, 1, j + 1, i, 1))
+            Wy = -1.05 * BeamDeadLoadFloor - 0.25 * BeamLiveLoadFloor
+            ops.eleLoad('-ele', beamElementTag, '-type', '-beamUniform', Wy)
 
+        # Gravity load on leaning column
+        leaningPointTag = int('%i%i' % (n_Xbay + 2, i))
+        Ly = -1 * LeaningColumnDeadLoadFloor - 0.05 * LeaningColumnLiveLoadFloor
+        ops.load(leaningPointTag, 0, Ly, 0)
+    print('Expected gravity loads are defined!')
+        
+    # Eigenvalue Analysis
+    PI = 2*math.asin(1.0)
+    lambdaN = ops.eigen(2)
+    T1 = 2*PI/(math.sqrt(lambdaN[0]))
+    T2 = 2*PI/(math.sqrt(lambdaN[1]))
+    print(T1, T2)
     ################ Define gravity analysis ################
-
+    # ?
     ################ Define damping ################
 
     ################ Define ground motion scale factor ################
-
+    # ?
     ################ Define Time History ################
 
     print('Analysis Completed!')
