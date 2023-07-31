@@ -3,6 +3,8 @@
 import openseespy.opensees as ops
 from Functions import SectionProperty, rotLeaningCol
 import pandas as pd
+import math
+import opsvis as opsv
 
 
 # ################ Generate OpenSeesPy model for elastic analysis ################
@@ -45,13 +47,13 @@ def ElasticAnalysis(building):
     # ################ Define all nodes ################
     # Define all nodes
     # Units: inch
-    BayWidth = building.geometry['X bay width'] * 12
-    FirstStory = building.geometry['first story height'] * 12
-    TypicalStory = building.geometry['typical story height'] * 12
+    BayWidth = float(building.geometry['X bay width']) * 12
+    FirstStory = float(building.geometry['first story height']) * 12
+    TypicalStory = float(building.geometry['typical story height']) * 12
 
     # Define nodes at corner of frames and leaning column
-    n_story = building.geometry['number of story']
-    n_Xbay = building.geometry['number of X bay']
+    n_story = int(building.geometry['number of story'])
+    n_Xbay = int(building.geometry['number of X bay'])
     for i in range(1, n_story + 2):
         # Define nodes at corner of frames
         for j in range(1, n_Xbay + 2):
@@ -77,7 +79,7 @@ def ElasticAnalysis(building):
     Xec = (n_Xbay + 1) * BayWidth
     for i in range(2, n_story + 2):
         # The node below floor level
-        extraNodeTagB = int('%i%i%i' % (n_Xbay + 2), i, 2)
+        extraNodeTagB = int('%i%i%i' % (n_Xbay + 2, i, 2))
         Yec = FirstStory + (i-2) * TypicalStory
         ops.node(extraNodeTagB, Xec, Yec)
 
@@ -85,7 +87,7 @@ def ElasticAnalysis(building):
         # because no leaning column above roof
         if i < n_story + 1:
             # The node above floor level
-            extraNodeTagT = int('%i%i%i' % (n_Xbay + 2), i, 4)
+            extraNodeTagT = int('%i%i%i' % (n_Xbay + 2, i, 4))
             ops.node(extraNodeTagT, Xec, Yec)
         else:
             pass
@@ -137,7 +139,7 @@ def ElasticAnalysis(building):
         endNode = int('%i%i' % (n_Xbay+2, i))
         ops.element('Truss', trussElementTag, startNode,
                     endNode, AreaRigid, TrussMatID)
-        print('Beams are defined!')
+    print('Beams are defined!')
     
     # ################ Write column ################
     # Define exterior column section sizes
@@ -152,7 +154,7 @@ def ElasticAnalysis(building):
             endNode = int('%i%i%i' % (j, i+1, 1))
             # Determine whether the column is interior or exterior column
             # this would affect the column section size
-            if 1 < j < building.geometry['number of X bay'] + 1:
+            if 1 < j < n_Xbay + 1:
                 Column = InteriorColumn
             else:
                 Column = ExteriorColumn
@@ -163,12 +165,12 @@ def ElasticAnalysis(building):
         if i == 1:
             leaningElementTag = int('%i%i%i%i%i%i' % (
                 3, n_Xbay + 2, i, n_Xbay + 2, i+1, 2))
-            startNode = int('%i%i', (n_Xbay+2, i))
+            startNode = int('%i%i' % (n_Xbay+2, i))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         else:
             leaningElementTag = int('%i%i%i%i%i%i%i' % (
                 3, n_Xbay + 2, i, 4, n_Xbay + 2, i+1, 2))
-            startNode = int('%i%i%i', (n_Xbay+2, i, 4))
+            startNode = int('%i%i%i' % (n_Xbay+2, i, 4))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         ops.element('elasticBeamColumn', leaningElementTag, startNode,
                     endNode, AreaRigid, Es, IRigid, PDeltaTransf)
@@ -198,7 +200,7 @@ def ElasticAnalysis(building):
     # ################ Write Mass ################
     # Define Nodal Mass
     # Define floor weights and each nodal mass
-    FrameTributaryMassRatio = 1.0 / building.geometry['number of X LFRS']
+    FrameTributaryMassRatio = 1.0 / float(building.geometry['number of X LFRS'])
     TotalNodesPerFloor = n_Xbay + 2
     for i in range(2, n_story + 2):
         FloorWeight = building.gravity_loads['floor weight'][i-2]
@@ -207,7 +209,24 @@ def ElasticAnalysis(building):
         
         # Write nodal masses for each floor level
         for j in range(1, n_Xbay + 2):
-            nodetag = int('%i%i%i%i' % (j, i, 1, 1))
+            nodetag = int('%i%i%i' % (j, i, 1))
             ops.mass(nodetag, NodalMassFloor, Negligible, Negligible)
     print('Nodal mass are defined!')
+
+    # do eigenvalue analysis
+    PI = 2 * math.asin(1.0)
+    numEigenvalues = 3
+    lambdaN = ops.eigen('-genBandArpack', numEigenvalues)
+    w1 = lambdaN[0]**0.5
+    w3 = lambdaN[2]**0.5
+    T1 = 2 * PI / w1
+    T3 = 2 * PI / w3
+    print(w1, w3)
+    print(T1, T3)
+    
+    # opsv.plot_mode_shape(1, sfac=False, nep=17, unDefoFlag=1, 
+    # fmt_undefo='g:', interpFlag=0, endDispFlag=0, fmt_interp='b-', 
+    # fmt_nodes='rs', Eo=0, az_el=(- 60.0, 40.0), fig_wi_he=(60.0, 40.0), 
+    # fig_lbrt=(0.04, 0.04, 0.96, 0.96))
+    
     

@@ -265,7 +265,7 @@ def NonlinearAnalysis(building, columns, beams):
         endNode = int('%i%i' % (n_Xbay+2, i))
         ops.element('Truss', trussElementTag, startNode,
                     endNode, AreaRigid, TrussMatID)
-        print('Beams are defined!')
+    print('Beams are defined!')
 
     ################ Define column elements ################
     # Define exterior section sizes
@@ -292,12 +292,12 @@ def NonlinearAnalysis(building, columns, beams):
         if i == 1:
             leaningElementTag = int('%i%i%i%i%i%i' % (
                 3, n_Xbay + 2, i, n_Xbay + 2, i+1, 2))
-            startNode = int('%i%i', (n_Xbay+2, i))
+            startNode = int('%i%i' % (n_Xbay+2, i))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         else:
             leaningElementTag = int('%i%i%i%i%i%i%i' % (
                 3, n_Xbay + 2, i, 4, n_Xbay + 2, i+1, 2))
-            startNode = int('%i%i%i', (n_Xbay+2, i, 4))
+            startNode = int('%i%i%i' % (n_Xbay+2, i, 4))
             endNode = int('%i%i%i' % (n_Xbay+2, i+1, 2))
         ops.element('elasticBeamColumn', leaningElementTag, startNode,
                     endNode, AreaRigid, Es, IRigid, PDeltaTransf)
