@@ -1,7 +1,7 @@
 # This file is used to generate nonlinear opensees model by OpenSeesPy
 # Created by Jiajun Du @ Tongji University in July 2023
 
-from openseespy.opensees import ops
+import openseespy.opensees as ops
 import numpy as np
 from Functions import NodesAroundPanelZone, CreateIMKMaterial, SectionProperty
 from Functions import rotBeamSpring, rotColumnSpring, rotLeaningCol, elemPanelZone2D, rotPanelZone2D
@@ -9,7 +9,7 @@ import math
 import pandas as pd
 
 
-def NonlinearAnalysis(building, columns, beams):
+def NonlinearAnalysis(building, columns, beams, baseFile):
     """
     This function is used to establish the NonlinearAnalysis Model and return
     the required response.
@@ -74,14 +74,14 @@ def NonlinearAnalysis(building, columns, beams):
     # Create all node tags and coordinates for nonlinear analysis model
     # Units: inch
     # Set bay width and story height
-    BayWidth = building.geometry['X bay width'] * 12
-    FirstStory = building.geometry['first story height'] * 12
-    TypicalStory = building.geometry['typical story height'] * 12
+    BayWidth = float(building.geometry['X bay width']) * 12.0
+    FirstStory = float(building.geometry['first story height']) * 12.0
+    TypicalStory = float(building.geometry['typical story height']) * 12.0
 
     # Define the panel sizes before building the node coordinates
     # Set panel zone size as column depth and beam depth
-    n_story = building.geometry['number of story']
-    n_Xbay = building.geometry['number of X bay']
+    n_story = int(building.geometry['number of story'])
+    n_Xbay = int(building.geometry['number of X bay'])
     PanelSizeLevelColumn = np.zeros([n_story + 1, n_Xbay + 1, 2])
     for i in range(1, n_story + 2):
         # i is floor level number (1 for ground level)
@@ -104,14 +104,14 @@ def NonlinearAnalysis(building, columns, beams):
 
     # Define nodes for the frame
     for i in range(1, n_story + 2):  # i is the floor level number
+        if i <= 2:
+            Height = (i - 1) * FirstStory
+        else:
+            Height = FirstStory + (i - 2) * TypicalStory
         for j in range(1, n_Xbay + 2):  # j is the column label
-            if i <= 2:
-                Height = (i - 1) * FirstStory
-            else:
-                Height = FirstStory + (i - 2) * TypicalStory
-                NodesAroundPanelZone(j, i, (j - 1) * BayWidth, Height,
-                                     PanelSizeLevelColumn[i - 1, j - 1, :],
-                                     MaximumFloor, MaximumCol)
+            NodesAroundPanelZone(j, i, (j - 1) * BayWidth, Height,
+                                 PanelSizeLevelColumn[i - 1, j - 1, :],
+                                 MaximumFloor, MaximumCol)
     print('Nodes for frame are defined!')
 
     # Create the nodes for leaning column
@@ -159,12 +159,12 @@ def NonlinearAnalysis(building, columns, beams):
     # Select mid right node of each panel zone as the constrained node
     ConstrainDOF = 1  # X-direction
     for i in range(2, n_story + 2):
-        nodetag1 = ('1%i11' % (i))  # Pier 1
-        for j in range(1, n_Xbay + 2):
-            nodetag2 = ('%i%i11' % (j, i))  # Pier j
+        nodetag1 = int('1%i11' % (i))  # Pier 1
+        for j in range(2, n_Xbay + 2):
+            nodetag2 = int('%i%i11' % (j, i))  # Pier j
             ops.equalDOF(nodetag1, nodetag2, ConstrainDOF)
         # Include the leaning column nodes to floor constraint
-        nodetag3 = ('%i%i' % (n_Xbay + 2, i))
+        nodetag3 = int('%i%i' % (n_Xbay + 2, i))
         ops.equalDOF(nodetag1, nodetag3, ConstrainDOF)
     print('Floor constraints are defined!')
 
@@ -280,7 +280,7 @@ def NonlinearAnalysis(building, columns, beams):
             endNode = int('%i%i%i%i' % (j, i+1, 1, 6))
             # Determine whether the column is interior or exterior column
             # this would affect the column section size
-            if 1 < j < building.geometry['number of X bay'] + 1:
+            if 1 < j < n_Xbay + 1:
                 Column = InteriorColumn
             else:
                 Column = ExteriorColumn
@@ -314,7 +314,7 @@ def NonlinearAnalysis(building, columns, beams):
             nodeRL = int('%i%i%i%i' % (j, i, 1, 1))
             # node on left end of beam element
             nodeCL = int('%i%i%i%i' % (j, i, 1, 5))
-            rotBeamSpring(beamSpringTagL, nodeRL, nodeCL, material_tag)
+            rotBeamSpring(beamSpringTagL, nodeRL, nodeCL, material_tag, StiffMatID)
             
             beamSpringTagR = int('%i%i%i%i%i%i%i' % (7, j+1, i, 0, 9, 1, 3))
             # node on mid left of panel zone
@@ -411,9 +411,21 @@ def NonlinearAnalysis(building, columns, beams):
             if j != n_Xbay + 1:
                 db = beams[i-2][j-1].section['d']
             else:
-                db = beams[i-2][-1].section['d']  # ?
+                db = beams[i-2][n_Xbay-1].section['d']  # ?
             rotPanelZone2D(eleID, nodeR, nodeC, Es, Fy, dc, bf_c, tf_c, tw, db, 1.1, 0.03)
 
+    # ################ Eigenvalue Analysis ################
+    # do eigenvalue analysis
+    PI = 2 * math.asin(1.0)
+    numEigenvalues = 3
+    lambdaN = ops.eigen('-genBandArpack', numEigenvalues)
+    w1 = lambdaN[0]**0.5
+    w3 = lambdaN[2]**0.5
+    T1 = 2 * PI / w1
+    T3 = 2 * PI / w3
+    print(w1, w3)
+    print(T1, T3)
+    
     ################ Define gravity loads ################
     # Define expected gravity loads
     ts_tag = 1
@@ -443,19 +455,112 @@ def NonlinearAnalysis(building, columns, beams):
         Ly = -1 * LeaningColumnDeadLoadFloor - 0.05 * LeaningColumnLiveLoadFloor
         ops.load(leaningPointTag, 0, Ly, 0)
     print('Expected gravity loads are defined!')
-        
-    # Eigenvalue Analysis
-    PI = 2*math.asin(1.0)
-    lambdaN = ops.eigen(2)
-    T1 = 2*PI/(math.sqrt(lambdaN[0]))
-    T2 = 2*PI/(math.sqrt(lambdaN[1]))
-    print(T1, T2)
-    ################ Define gravity analysis ################
-    # ?
-    ################ Define damping ################
 
+    # ############### Define gravity analysis ################
+    # Perform Gravity Analysis
+    # This part should be executed before running the EQ or pushover
+    # Units: kips, inches, seconds
+    # Gravity analysis parameters -- load controlled static analysis
+    Tol = 1.0e-8
+    ops.constraints('Plain')
+    ops.numberer('RCM')
+    ops.system('BandGeneral')
+    ops.test('EnergyIncr', Tol, 6)
+    ops.algorithm('Newton')
+    NstepGravity = 5
+    DGravity = 1.0 / NstepGravity
+    ops.integrator('LoadControl', DGravity)
+    ops.analysis('Static')
+    ops.analyze(NstepGravity)
+    print('Gravity Analysis Completed!')
+    print(ops.nodeDisp(1410, 1))
+    ops.loadConst('-time', 0.0)
+    Tol = 1.0e-6
+    
+    ################ Define damping ################
+    # Define the damping for dynamic analysis
+    # A damp ratio of 2% is used for steel buildings
+    dampingRatio = 0.02
+    # Define damping parameters
+    alpha0 = dampingRatio * 2.0 * w1 * w3 / (w1 + w3)
+    alpha1 = dampingRatio * 2.0 / (w1 + w3) * (n + 1.0) / n
+    # Assign damping to beam elements
+    beamEleTagList = []
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 1):
+            beamEleTag = int('%i%i%i%i%i%i%i' % (2, j, i, 1, j + 1, i, 1))
+            beamEleTagList.append(beamEleTag)
+    ops.region(1, '-ele', *beamEleTagList, '-rayleigh', 0.0, 0.0, alpha1, 0.0)
+    
+    # Assign damping to column elements
+    columnEleTagList = []
+    for i in range(1, n_story + 1):
+        for j in range(1, n_Xbay + 2):
+            columnEleTag = int('%i%i%i%i%i%i%i' % (3, j, i, 1, j, i + 1, 1))
+            columnEleTagList.append(columnEleTag)
+    ops.region(2, '-ele', *columnEleTagList, '-rayleigh', 0.0, 0.0, alpha1, 0.0)
+    
+    # Assign damping to nodes
+    nodeTagList = []
+    for i in range(2, n_story + 2):
+        for j in range(1, n_Xbay + 3):
+            if j == n_Xbay + 2:
+                nodeTag = int('%i%i' % (j, i))
+            else:
+                nodeTag = int('%i%i%i%i' % (j, i, 1, 1))
+            nodeTagList.append(nodeTag)
+    ops.region(3, '-node', *nodeTagList, '-rayleigh', alpha0, 0.0, 0.0, 0.0)
+    print('Rayleigh damping defined!')
+        
     ################ Define ground motion scale factor ################
     # ?
     ################ Define Time History ################
-
+    dt = 0.02
+    import os
+    os.chdir(baseFile)
+    ops.timeSeries('Path', 2, '-filePath', 'ZZ1.dat', '-dt', dt, '-factor', g / 0.35)
+    #                               tag dir
+    ops.pattern('UniformExcitation', 2, 1, '-accel', 2)
+    ops.wipeAnalysis()
+    #
+    ops.system('UmfPack')
+    ops.constraints('Plain')
+    ops.test('NormDispIncr', 1.0e-6, 50)
+    ops.algorithm('NewtonLineSearch')
+    ops.numberer('RCM')
+    ops.integrator('Newmark', 0.5, 0.25)
+    ops.analysis('Transient')
+    
+    nPts = 4175
+    tFinal = nPts * dt
+    tCurrent = ops.getTime()
+    ok = 0
+    time = [tCurrent]
+    u3 = [0.0]
+    u2 = [0.0]
+    
+    # Perform the transient analysis
+    while ok == 0 and tCurrent < tFinal:
+        ok = ops.analyze(1, 0.001)
+        # if the analysis fails try initial tangent iteration
+        if ok != 0:
+            # print("regular newton failed .. lets try an initial stiffness for this step")
+            ops.test('NormDispIncr', 1.0e-6, 100, 0)
+            ops.algorithm('ModifiedNewton', '-initial')
+            ok = ops.analyze(1, 0.001)
+            if ok == 0:
+                pass
+                # print('that worked .. back to regular newton')
+            ops.test('NormDispIncr', 1.0e-6, 50)
+            ops.algorithm('NewtonLineSearch')
+        tCurrent = ops.getTime()
+        time.append(tCurrent)
+        u3.append(ops.nodeDisp(1411, 1))
+        u2.append(ops.nodeDisp(1311, 1))
     print('Analysis Completed!')
+    
+    U3 = np.array(u3)
+    U2 = np.array(u2)
+    ratio = (U3 - U2) / TypicalStory
+    
+    return ratio

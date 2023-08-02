@@ -43,10 +43,11 @@ def NodesAroundPanelZone(no_Pier, no_Floor, Xc, Yc, PanelSize, MaximumFloor,
     #                   15: right(positive) beam node
     #                   16: Bottom(negative) column node
     """
-
     if no_Floor == 1:
-        nodetag = int('%i%i%i' % (no_Pier, no_Floor, 10))
-        ops.node(nodetag, Xc, Yc)
+        nodetag1 = int('%i%i%i' % (no_Pier, no_Floor, 10))
+        nodetag2 = int('%i%i%i' % (no_Pier, no_Floor, 14))
+        ops.node(nodetag1, Xc, Yc)
+        ops.node(nodetag2, Xc, Yc)
     else:
         dc = PanelSize[0] / 2.0
         db = PanelSize[1] / 2.0
@@ -139,6 +140,7 @@ def CreateIMKMaterial(matTag, K0, n, a_men, My, Lambda, theta_p, theta_pc, resid
     # Argument explanation:
     # https://openseespydoc.readthedocs.io/en/latest/src/Bilin.html
     # Create the modified Ibarra-Medina-Krawinkler material model
+    matTag = int(matTag)
     ops.uniaxialMaterial('Bilin', matTag, Ks, asPosScaled, asNegScaled, My, -My,
                          Lambda_S, Lambda_C, Lambda_A, Lambda_K, 1.0, 1.0, 1.0, 1.0,
                          theta_p, theta_p, theta_pc, theta_pc, residual, residual,

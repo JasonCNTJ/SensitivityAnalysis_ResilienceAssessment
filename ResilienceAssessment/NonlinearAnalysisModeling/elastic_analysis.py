@@ -224,9 +224,5 @@ def ElasticAnalysis(building):
     print(w1, w3)
     print(T1, T3)
     
-    # opsv.plot_mode_shape(1, sfac=False, nep=17, unDefoFlag=1, 
-    # fmt_undefo='g:', interpFlag=0, endDispFlag=0, fmt_interp='b-', 
-    # fmt_nodes='rs', Eo=0, az_el=(- 60.0, 40.0), fig_wi_he=(60.0, 40.0), 
-    # fig_lbrt=(0.04, 0.04, 0.96, 0.96))
     
     
