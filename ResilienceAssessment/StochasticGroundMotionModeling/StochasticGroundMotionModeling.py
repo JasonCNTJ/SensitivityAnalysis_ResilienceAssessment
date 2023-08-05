@@ -5,7 +5,6 @@ import numpy as np
 # import pandas as pd
 import pickle
 import scipy.stats as st
-import random
 from scipy.stats import gamma
 from scipy.optimize import minimize
 import math
@@ -27,7 +26,8 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     """
 
     # beta 系数， sigma标准差， corr相关系数
-    with open('betsigcor.pkl', 'rb') as file:
+    betFile = r'C:\Users\12734\OneDrive\重要文件\2_SensitivityAnalysis\Sensitivity-PythonCode\sensitivity-code\ResilienceAssessment\StochasticGroundMotionModeling\betsigcor.pkl'
+    with open(betFile, 'rb') as file:
         beta = pickle.load(file)
         sigma = pickle.load(file)
         corr = pickle.load(file)
@@ -40,14 +40,15 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     par = np.array([1, F, M / 7, R / 25, Vs / 750])
     par = par.T
     v_miu = (beta @ par).T  # 平均值
-    random.seed(1)  # 确保结果可以复现
+    np.random.seed(1)  # 确保结果可以复现
     # num = 1000
     v = np.random.multivariate_normal(v_miu, covar, num)
     p = st.norm.cdf(v)
 
     # 利用 p 得到 theta
     # theta
-    with open('thetacdf.pkl', 'rb') as file:
+    thetaFile = r'C:\Users\12734\OneDrive\重要文件\2_SensitivityAnalysis\Sensitivity-PythonCode\sensitivity-code\ResilienceAssessment\StochasticGroundMotionModeling\thetacdf.pkl'
+    with open(thetaFile, 'rb') as file:
         theta1_cdf = pickle.load(file)
         theta2_cdf = pickle.load(file)
         theta3_cdf = pickle.load(file)
@@ -72,7 +73,7 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
         thetai = np.interp(p[:, i], cdf, x)
         if i == 0:
             thetai = np.exp(thetai)
-        elif i == 3 or i == 5:
+        elif i == 3 or i == 4:
             thetai = 2 * np.pi * thetai
         else:
             pass
@@ -85,9 +86,9 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
         theta[:, i] = thetad['theta%i' % (i + 1)]
 
     # 取出第i组参数
-    i = 0
+    i = 1
     theta_i = theta[i, :]
-
+    
     # Known percentiles and values
     t_5_95 = theta_i[1]
     t_45 = theta_i[2]
@@ -126,12 +127,8 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
         if k != 0:
             id = np.arange(1, k + 1)
             uid = np.random.randn(k)
-            wfid = theta_i[3] + theta_i[4] * (ti[id - 1] - theta_i[2]
-                                              )  # 计算ti下的wf值
-            hid = wfid / np.sqrt(1 - kesi_f**2) * np.exp(
-                -kesi_f * wfid *
-                (t - ti[id - 1])) * np.sin(wfid * np.sqrt(1 - kesi_f**2) *
-                                           (t - ti[id - 1]))
+            wfid = theta_i[3] + theta_i[4] * (ti[id - 1] - theta_i[2])  # 计算ti下的wf值
+            hid = wfid / np.sqrt(1 - kesi_f**2) * np.exp(-kesi_f * wfid * (t - ti[id - 1])) * np.sin(wfid * np.sqrt(1 - kesi_f**2) * (t - ti[id - 1]))
             hjd2 = hid**2
             fm = np.sqrt(np.sum(hjd2))
             su = np.sum((hid / fm * uid))
@@ -157,9 +154,9 @@ def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     wc = 0.1 * 2 * np.pi
     ACC = x - 2 * wc * sol[:, 1] - wc**2 * sol[:, 0]
 
-    plt.plot(t, ACC)
+    plt.plot(t, ACC,linewidth = 0.5)
     plt.xlabel('time (s)')
-    plt.ylabel('acc (m/s^2)')
+    plt.ylabel('acc (g)')
     plt.title('acc history')
     plt.grid(True)
     plt.show()
