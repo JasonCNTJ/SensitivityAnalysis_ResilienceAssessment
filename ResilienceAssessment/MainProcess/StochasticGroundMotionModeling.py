@@ -12,7 +12,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
+def StochasticGroundMotionModeling(M, R, Vs, whichone, num=1, tn=40, F=1):
     """
     :params M: magnitude;
     :params R: distance;
@@ -41,9 +41,9 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
     pari = np.array([1, F, M / 7, R / 25, Vs / 750]).T
     v_miu1 = (beta[0, :] @ par1).T  # 平均值
     v_miu1 = np.array([v_miu1])
-    v_miui = (beta[1:6,:] @ pari).T
+    v_miui = (beta[1: 6,:] @ pari).T
     v_miu = np.concatenate((v_miu1, v_miui))
-    np.random.seed(1)  # 确保结果可以复现
+    # np.random.seed(1)  # 确保结果可以复现
     # num = 1000
     v = np.random.multivariate_normal(v_miu, covar, num)
     p = st.norm.cdf(v)
@@ -157,12 +157,6 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
     wc = 0.1 * 2 * np.pi
     ACC = x - 2 * wc * sol[:, 1] - wc**2 * sol[:, 0]
 
-    plt.plot(t, ACC, linewidth=0.5)
-    plt.xlabel('time (s)')
-    plt.ylabel('acc (g)')
-    plt.title('acc history')
-    plt.grid(True)
-    plt.show()
     return ACC, tn
 
 

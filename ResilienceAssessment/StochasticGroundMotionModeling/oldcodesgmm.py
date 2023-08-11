@@ -12,7 +12,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
+def StochasticGroundMotionModeling(M, R, Vs, num=1000, tn=40, F=1):
     """
     :params M: magnitude;
     :params R: distance;
@@ -37,12 +37,9 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
     sigma2_sqrt = np.sqrt(sigma2)
     stv_m = np.diag(sigma2_sqrt)
     covar = stv_m @ corr @ stv_m  # 协方差矩阵
-    par1 = np.array([1, F, M / 7, np.log(R / 25), np.log(Vs / 750)]).T
-    pari = np.array([1, F, M / 7, R / 25, Vs / 750]).T
-    v_miu1 = (beta[0, :] @ par1).T  # 平均值
-    v_miu1 = np.array([v_miu1])
-    v_miui = (beta[1:6,:] @ pari).T
-    v_miu = np.concatenate((v_miu1, v_miui))
+    par = np.array([1, F, M / 7, R / 25, Vs / 750])
+    par = par.T
+    v_miu = (beta @ par).T  # 平均值
     np.random.seed(1)  # 确保结果可以复现
     # num = 1000
     v = np.random.multivariate_normal(v_miu, covar, num)
@@ -89,7 +86,7 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
         theta[:, i] = thetad['theta%i' % (i + 1)]
 
     # 取出第i组参数
-    i = whichone
+    i = 1
     theta_i = theta[i, :]
     
     # Known percentiles and values
@@ -157,14 +154,13 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=100, tn=40, F=1):
     wc = 0.1 * 2 * np.pi
     ACC = x - 2 * wc * sol[:, 1] - wc**2 * sol[:, 0]
 
-    plt.plot(t, ACC, linewidth=0.5)
+    plt.plot(t, ACC,linewidth = 0.5)
     plt.xlabel('time (s)')
     plt.ylabel('acc (g)')
     plt.title('acc history')
     plt.grid(True)
     plt.show()
-    return ACC, tn
 
 
 if __name__ == '__main__':
-    StochasticGroundMotionModeling(6.61, 19.3, 602, 0)
+    StochasticGroundMotionModeling(6.61, 19.3, 602)
