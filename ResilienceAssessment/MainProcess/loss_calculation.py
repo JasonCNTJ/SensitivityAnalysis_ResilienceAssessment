@@ -4,6 +4,8 @@ import numpy as np
 
 # Fragility Database
 class Data:
+    """
+    """
     def __init__(self):
         self.componentData = {
             "1": {
@@ -796,7 +798,7 @@ class Data:
             ]
             pds1 = round(perList[1] * 100)
             pds2 = pds1 + round(perList[2] * 100)
-            pds3 = pds2 + round(perList[3])
+            pds3 = pds2 + round(perList[3] * 100)
             pds = [pds1, pds2, pds3]
         else:
             perList = []
@@ -826,9 +828,9 @@ class Data:
         return randomCost
 
     # max_ridr for prob : no repair
-    def get_prob_resi(self, max_ridr):
-        mean = 0.01
-        stddev = 0.3
+    def get_prob_resi(self, max_ridr, M_rf, S_rf):
+        mean = M_rf
+        stddev = S_rf
         dist = lognorm(s=stddev, scale=mean)
         x = np.linspace(0, max_ridr * 2, 200)
         y = dist.cdf(x)
@@ -838,81 +840,93 @@ class Data:
         return objPercent
 
     # 根据EDP计算某层单个构件对应的修复费用
-    def cal_comp_repair(self, story, edp, index, nRepair):
-
+    def cal_comp_repair(self, story, edp, index, nRepair, worstCase):
         comp = self.componentData['%s' % index]
         # 如果该楼层有这一构件，则对修复费用进行计算，否则返回0
         if story in comp['STORY']:
             pds = self.cal_prob(edp, index)  # 'index' 构件编号
             ds = len(pds)  # damage state 的数量
             compCost = np.zeros(nRepair)
-
-            if ds == 1:
-                nNoZero = int(pds[0] / 100 * nRepair)
-                if nNoZero != 0:
+            if worstCase:
+                if ds == 1:
                     singleCost = self.cal_interp(index, 1)
-                    randomCost = self.get_random_comp_cost(index, 1, singleCost, nNoZero)
-                    compCost[:nNoZero] = randomCost * comp['UNIT']
-                np.random.shuffle(compCost)  # 混排
+                    randomCost = self.get_random_comp_cost(index, 1, singleCost, nRepair)
+                    compCost = randomCost * comp['UNIT']
+                if ds == 2:
+                    singleCost = self.cal_interp(index, 2)
+                    randomCost = self.get_random_comp_cost(index, 2, singleCost, nRepair)
+                    compCost = randomCost * comp['UNIT']
+                if ds == 3:
+                    singleCost = self.cal_interp(index, 3)
+                    randomCost = self.get_random_comp_cost(index, 3, singleCost, nRepair)
+                    compCost = randomCost * comp['UNIT']
+            else:
+                if ds == 1:
+                    nNoZero = int(pds[0] / 100 * nRepair)
+                    if nNoZero != 0:
+                        singleCost = self.cal_interp(index, 1)
+                        randomCost = self.get_random_comp_cost(index, 1, singleCost, nNoZero)
+                        compCost[:nNoZero] = randomCost * comp['UNIT']
+                    np.random.shuffle(compCost)  # 混排
 
-            if ds == 2:
-                nNoZero1 = int(pds[0] / 100 * nRepair)
-                if nNoZero1 != 0:
-                    singleCost1 = self.cal_interp(index, 1)
-                    randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
-                    compCost[:nNoZero1] = randomCost1 * comp['UNIT']
-                nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
-                if nNoZero2 != 0:
-                    singleCost2 = self.cal_interp(index, 2)
-                    randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
-                    compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
-                np.random.shuffle(compCost)  # 混排
-                
-                
-            if ds == 3:
-                nNoZero1 = int(pds[0] / 100 * nRepair)
-                if nNoZero1 != 0:
-                    singleCost1 = self.cal_interp(index, 1)
-                    randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
-                    compCost[:nNoZero1] = randomCost1 * comp['UNIT']
-                nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
-                if nNoZero2 != 0:
-                    singleCost2 = self.cal_interp(index, 2)
-                    randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
-                    compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
-                nNoZero3 = int((pds[2] - pds[1]) / 100 * nRepair)
-                if nNoZero3 != 0:
-                    singleCost3 = self.cal_interp(index, 3)
-                    randomCost3 = self.get_random_comp_cost(index, 3, singleCost3, nNoZero3)
-                    compCost[nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT']
-                np.random.shuffle(compCost)   # 混排
+                if ds == 2:
+                    nNoZero1 = int(pds[0] / 100 * nRepair)
+                    if nNoZero1 != 0:
+                        singleCost1 = self.cal_interp(index, 1)
+                        randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
+                        compCost[:nNoZero1] = randomCost1 * comp['UNIT']
+                    nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
+                    if nNoZero2 != 0:
+                        singleCost2 = self.cal_interp(index, 2)
+                        randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
+                        compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
+                    np.random.shuffle(compCost)  # 混排
+
+                if ds == 3:
+                    nNoZero1 = int(pds[0] / 100 * nRepair)
+                    if nNoZero1 != 0:
+                        singleCost1 = self.cal_interp(index, 1)
+                        randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
+                        compCost[:nNoZero1] = randomCost1 * comp['UNIT']
+                    nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
+                    if nNoZero2 != 0:
+                        singleCost2 = self.cal_interp(index, 2)
+                        randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
+                        compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
+                    nNoZero3 = int((pds[2] - pds[1]) / 100 * nRepair)
+                    if nNoZero3 != 0:
+                        singleCost3 = self.cal_interp(index, 3)
+                        randomCost3 = self.get_random_comp_cost(index, 3, singleCost3, nNoZero3)
+                        compCost[nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT']
+                    np.random.shuffle(compCost)   # 混排
         else:
             compCost = np.zeros(nRepair)
+
         return compCost
 
     # 输出此Realization下的IDR 和 PFA
-    def cal_repair(self, IDR, PFA, nRepair):
+    def cal_repair(self, IDR, PFA, nRepair, worstCase=0):
         """
         :param nRepair: 可修复的实现次数；
         """
-        sCompCostList = np.empty((3, nRepair))
-        nCompCostList = np.empty((3, nRepair))
-        cCompCostList = np.empty((3, nRepair))
-        storyCostList = np.empty((3, nRepair))
+        sCompCostList = np.zeros((3, nRepair))
+        nCompCostList = np.zeros((3, nRepair))
+        cCompCostList = np.zeros((3, nRepair))
+        storyCostList = np.zeros((3, nRepair))
         #                   1 2 3
         for floor in range(1, 4):  # 层 迭代
             # single floor repair cost
-            sCompCost = np.empty(nRepair)  # 结构构件
-            nCompCost = np.empty(nRepair)  # 非结构构件
-            cCompCost = np.empty(nRepair)  # 内容物
-            storyCost = np.empty(nRepair)  # 整层
+            sCompCost = np.zeros(nRepair)  # 结构构件
+            nCompCost = np.zeros(nRepair)  # 非结构构件
+            cCompCost = np.zeros(nRepair)  # 内容物
+            storyCost = np.zeros(nRepair)  # 整层
 
             for n in range(1, len(self.componentData) + 1):  # 构件迭代
 
                 # PID 构件
                 if self.componentData['%s' % n]['EDP'] == 'PID':
                     edp_pidr = IDR[floor - 1]
-                    compCost = self.cal_comp_repair(floor, edp_pidr, n, nRepair)
+                    compCost = self.cal_comp_repair(floor, edp_pidr, n, nRepair, worstCase)
                     if self.componentData['%s' % n]['CT'] == 'S':
                         sCompCost += compCost
                     elif self.componentData['%s' % n]['CT'] == 'N':
@@ -925,8 +939,8 @@ class Data:
                 elif self.componentData['%s' % n]['EDP'] == 'PFA':
                     edp_pfal = PFA[floor - 1]
                     edp_pfau = PFA[floor]
-                    compCostl = self.cal_comp_repair(floor - 1, edp_pfal, n, nRepair)  # 依据底部加速度的构件
-                    compCostu = self.cal_comp_repair(floor, edp_pfau, n, nRepair)
+                    compCostl = self.cal_comp_repair(floor - 1, edp_pfal, n, nRepair, worstCase)  # 依据底部加速度的构件
+                    compCostu = self.cal_comp_repair(floor, edp_pfau, n, nRepair, worstCase)
                     compCost = compCostl + compCostu  # 汇总一层天花板和地板的加速度
                     if self.componentData['%s' % n]['CT'] == 'S':
                         sCompCost += compCost
@@ -948,7 +962,7 @@ class Data:
 
         return frameCost, sframeCost, nframeCost, cframeCost
 
-    def costOut(self, IDR, PFA, RIDR, costReplace, nSample):
+    def costOut(self, IDR, PFA, RIDR, nSample, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep):
         """
         :param IDR: 层间位移角
         :param PFA: 峰值层加速度
@@ -956,7 +970,13 @@ class Data:
         :param costReplace: 重置成本
         :param nSample: 采样数目
         """
-        Output_list = np.empty(nSample)
+        Output_list = np.zeros(nSample)
+        # calculate the maximum repair cost potential of the components
+        IDR_m = np.array([10, 10, 10])
+        PFA_m = np.array([100, 100, 100, 100])
+        maxRepairCost, _, _, _ = self.cal_repair(IDR_m, PFA_m, 1000, worstCase=1)
+        maxRepairCost = np.max(maxRepairCost)
+        costReplace = C_rep * maxRepairCost
         # 判断是否倒塌
         maxIDR = IDR.max()
         if maxIDR >= 0.1:
@@ -964,12 +984,12 @@ class Data:
 
         else:
             # 因为残余层间位移角而无法修复的概率
-            probNoRepair = self.get_prob_resi(RIDR) / 100
+            probNoRepair = self.get_prob_resi(RIDR, M_rf, S_rf) / 100
             nNoRepair = int(nSample * probNoRepair)
             Output_list[:nNoRepair] = costReplace
             # 可修复的数目
             nRepair = nSample - nNoRepair
-            frameCost, sframeCost, nframeCost, cframeCost = self.cal_repair(IDR, PFA, nRepair)
+            frameCost, _, _, _ = self.cal_repair(IDR, PFA, nRepair, worstCase=0)
             Output_list[nNoRepair:] = frameCost
             np.random.shuffle(Output_list)  # 混排
             Output_mean = np.mean(Output_list)

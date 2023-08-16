@@ -9,7 +9,7 @@ import math
 import pandas as pd
 
 
-def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
+def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, kesi):
     """
     This function is used to establish the NonlinearAnalysis Model and return
     the required response.
@@ -41,7 +41,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
 
     # TODOS: Define the periods to use for the Rayleigh damping calculations
 
-    ################ Defining variables ################
+    # ############### Defining variables ################
     # Define Geometric Transformation
     PDeltaTransf = 1
     LinearTransf = 2
@@ -70,7 +70,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     ops.uniaxialMaterial('Elastic', StiffMatID, LargeNumber)
     # print('Variable defined!')
 
-    ################ Defining nodes (building, beams, columns) ################
+    # ############### Defining nodes (building, beams, columns) ################
     # Create all node tags and coordinates for nonlinear analysis model
     # Units: inch
     # Set bay width and story height
@@ -143,7 +143,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             pass
     # print('Extra nodes for leaning column springs defined!')
 
-    ################ Define node fixities ################
+    # ############### Define node fixities ################
     # Define the fixity at all column
     for j in range(1, n_Xbay + 2):
         nodetag = int('%i%i%i%i' % (j, 1, 1, 0))
@@ -153,7 +153,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     ops.fix(nodetag, 1, 1, 0)
     # print('All column base fixities are defined!')
 
-    ################ Define floor constraint ################
+    # ############### Define floor constraint ################
     # Define floor constraint
     # Nodes at same floor level have identical lateral displacement
     # Select mid right node of each panel zone as the constrained node
@@ -168,7 +168,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
         ops.equalDOF(nodetag1, nodetag3, ConstrainDOF)
     # print('Floor constraints are defined!')
 
-    ################ Define beam hinge material models ################
+    # ############### Define beam hinge material models ################
     # Define all beam plastic hinge materials using Modified IMK material model
     material_tag = 70001
     for i in range(2, n_story + 2):
@@ -205,7 +205,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             material_tag += 1
     # print('Beam hinge materials defined!')
 
-    ################ Define column hinge material models ################
+    # ############### Define column hinge material models ################
     # Define column hinge material models
     material_tag = 60001
     for i in range(1, n_story + 1):
@@ -242,7 +242,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             material_tag += 1
     # print('Column hinge materials are defined!')
 
-    ################ Define beam elements ################
+    # ############### Define beam elements ################
     # Define beam section sizes
     SectionDatabase = pd.read_csv(
         r'C:\Users\12734\OneDrive\重要文件\可参考文件\AutoSDAPlatform-master\AutoSDAPlatform-master\AllSectionDatabase.csv')
@@ -267,7 +267,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
                     endNode, AreaRigid, TrussMatID)
     # print('Beams are defined!')
 
-    ################ Define column elements ################
+    # ############### Define column elements ################
     # Define exterior section sizes
     for i in range(1, n_story + 1):
         ExteriorColumn = SectionProperty(
@@ -303,7 +303,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
                     endNode, AreaRigid, Es, IRigid, PDeltaTransf)
     # print('Columns are defined!')
 
-    ################ Define beam hinges ################
+    # ############### Define beam hinges ################
     # Create beam hinge element (rotational spring)
     # Define beam hinges using rotational spring with modified IMK material
     material_tag = 70001
@@ -325,8 +325,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             material_tag += 1
     # print('Beam hinges are defined!')
 
-
-    ################ Define column hinges ################
+    # ############### Define column hinges ################
     # Create column hinge element (rotational spring)
     # Define column hinges using rotational spring with modified IMK material
     material_tag = 60001
@@ -369,8 +368,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             
     # print('Column hinge are defined!')
 
-
-    ################ Define masses ################
+    # ############### Define masses ################
     # Define all nodal masses
     # Define floor weights and each nodal mass
     FrameTributaryMassRatio = 1.0 / building.geometry['number of X LFRS']
@@ -386,8 +384,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             ops.mass(nodetag, NodalMassFloor, Negligible, Negligible)
     # print('Nodal mass are defined!')
 
-
-    ################ Define elements in panel zone ################
+    # ############### Define elements in panel zone ################
     # Define elements in panel zones
     # Procedures used to produce panel zone elements:
     for i in range(2, n_story + 2):
@@ -397,7 +394,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
             elemPanelZone2D(eleTag, nodeR, Es, PDeltaTransf, LinearTransf)
     # print('Panel zone elements are defined!')
 
-    ################ Define springs in panel zone ################
+    # ############### Define springs in panel zone ################
     # Define the springs involved in panel zones
     for i in range(2, n_story + 2):
         for j in range(1, n_Xbay + 2):
@@ -426,19 +423,19 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     # print(w1, w3)
     # print(T1, T3)
     
-    ################ Define gravity loads ################
+    # ############### Define gravity loads ################
     # Define expected gravity loads
     ts_tag = 1
-    ops.timeSeries('Constant',ts_tag)
+    ops.timeSeries('Constant', ts_tag)
     ops.pattern('Plain', 104, ts_tag)
     for i in range(2, n_story + 2):
         # Convert the unit from lb/ft to kip/inch
         # Assign the beam dead load values (kip / inch)
-        BeamDeadLoadFloor = building.gravity_loads['beam dead load'][i-2] * 0.001 / 12
+        BeamDeadLoadFloor = building.gravity_loads['beam dead load'][i-2] * 0.001 / 12 * m_b
         # Assign the beam live load values
         BeamLiveLoadFloor = building.gravity_loads['beam live load'][i-2] * 0.001 / 12
         # Assign the point load acting on leaning column
-        LeaningColumnDeadLoadFloor = building.gravity_loads['leaning column dead load'][i-2]
+        LeaningColumnDeadLoadFloor = building.gravity_loads['leaning column dead load'][i-2] * m_b
         # Assign the point live load acting on leaning column
         LeaningColumnLiveLoadFloor = building.gravity_loads['leaning column live load'][i-2]
         # Define the load pattern in Opensees
@@ -477,10 +474,10 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     ops.loadConst('-time', 0.0)
     Tol = 1.0e-6
     
-    ################ Define damping ################
+    # ############### Define damping ################
     # Define the damping for dynamic analysis
     # A damp ratio of 2% is used for steel buildings
-    dampingRatio = 0.02
+    dampingRatio = kesi
     # Define damping parameters
     alpha0 = dampingRatio * 2.0 * w1 * w3 / (w1 + w3)
     alpha1 = dampingRatio * 2.0 / (w1 + w3) * (n + 1.0) / n
@@ -512,9 +509,9 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     ops.region(3, '-node', *nodeTagList, '-rayleigh', alpha0, 0.0, 0.0, 0.0)
     # print('Rayleigh damping defined!')
         
-    ################ Define ground motion scale factor ################
+    # ############### Define ground motion scale factor ################
     # ?
-    ################ Define Time History ################
+    # ############### Define Time History ################
     dt = dt
     # os.chdir(baseFile)
     # ops.timeSeries('Path', 2, '-filePath', 'ZZ1.dat', '-dt', dt, '-factor', g / 0.35)
@@ -579,12 +576,12 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
         a1.append(ops.nodeAccel(1211, 1))
         a0.append(ops.nodeAccel(1110, 1))
     print('Analysis Completed!')
-    
+
     U0 = np.array(u0)
     U1 = np.array(u1)
     U2 = np.array(u2)
     U3 = np.array(u3)
-    
+
     A0 = np.array(a0)
     A1 = np.array(a1)
     A2 = np.array(a2)
@@ -597,17 +594,12 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     A01 = gmlist + A1 / g
     A02 = gmlist + A2 / g
     A03 = gmlist + A3 / g
-    
+
     Amax0 = abs(A00).max()
     Amax1 = abs(A01).max()
     Amax2 = abs(A02).max()
     Amax3 = abs(A03).max()
-    
-    # Acc0 = np.fromfile('node1110.txt', dtype=np.float32, sep='\n', offset=0)
-    # Acc1 = np.fromfile('node1211.txt', dtype=np.float32, sep='\n', offset=0)
-    # Acc2 = np.fromfile('node1311.txt', dtype=np.float32, sep='\n', offset=0)
-    # Acc3 = np.fromfile('node1411.txt', dtype=np.float32, sep='\n', offset=0)
-    
+
     IDR_1 = abs(U1 - U0) / FirstStory
     IDR_2 = abs(U2 - U1) / TypicalStory
     IDR_3 = abs(U3 - U2) / TypicalStory
@@ -616,14 +608,9 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt):
     IDR2_MAX = IDR_2.max()
     IDR3_MAX = IDR_3.max()
 
-    # Acc0_MAX = abs(Acc0).max()
-    # Acc1_MAX = abs(Acc1).max()
-    # Acc2_MAX = abs(Acc2).max()
-    # Acc3_MAX = abs(Acc3).max()
-
     # delta_r
     Residual_idr = max(IDR_1[-1], IDR_2[-1], IDR_3[-1])
-    
+
     # assemble the result to output vector
     EDP_Result = np.array([IDR1_MAX, IDR2_MAX, IDR3_MAX, Amax0, Amax1, Amax2, Amax3, Residual_idr])
     return EDP_Result

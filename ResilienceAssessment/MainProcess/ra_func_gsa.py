@@ -18,10 +18,22 @@ from loss_calculation import Data
 def ResilienceAssessment(X):
     """
     :params X: a list of interested parameters.
+        'names': ['M', 'R', 'V_s30', 'F', 'm_b',
+                  'kesi', 'P_nsq', 'Q_con', 'M_bcj',
+                  'M_gcw', 'M_wp', 'M_sc', 'M_ele',
+                  'M_hvac', 'M_rf', 'S_rf', 'C_rep'],
+        'bounds': [
+            [6.0, 8.0], [10, 100], [600, 1500], [0, 1], [0.872, 1.128, 1, 0.1],
+            [0.02, 0.05], [0, 1], [0.616, 1.384, 1, 0.3], [0.616, 1.384, 1, 0.3],
+            [0.616, 1.384, 1, 0.3], [0.616, 1.384, 1, 0.3], [0.616, 1.384, 1, 0.3], [0.616, 1.384, 1, 0.3],
+            [0.616, 1.384, 1, 0.3], [0.005, 0.015], [0.1, 0.8], [1, 1.0/0.3]
+        ],
+        'dists': ['unif', 'unif', 'unif', 'unif', 'truncnorm',
+                  'unif', 'unif', 'truncnorm','truncnorm',
+                  'truncnorm', 'truncnorm', 'truncnorm', 'truncnorm',
+                  'truncnorm', 'uniform', 'uniform', 'uniform']
     :return: Output
     """
-    # 分配传入的参数
-
     # BASE INFORMATION
     cwdFile = pathlib.Path.cwd()
     cwdFile = cwdFile / 'ResilienceAssessment' / 'MainProcess'
@@ -90,20 +102,21 @@ def ResilienceAssessment(X):
     # Output = []
     for i in range(nSample):
         print(i)
-        ACC, tn = StochasticGroundMotionModeling(7.62, 19.3, 602, 0)
+        # 传递传入的参数
+        M, R, V_s30, F, m_b, kesi, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep = X[i, :]
+        # 随机生成地震动
+        ACC, tn = StochasticGroundMotionModeling(M, R, V_s30, F)
         # NTHA
         dt = 0.01
         ACC = ACC.tolist()
-        edpResult = NonlinearAnalysis(building, columns, beams, baseFile, ACC, dt)
+        edpResult = NonlinearAnalysis(building, columns, beams, baseFile, ACC, dt, m_b, kesi)
         edpOutput[i, :] = edpResult
         # print(edpResult)
         data = Data()
         IDR = edpResult[:3]
         PFA = edpResult[3:7]
-        frameCost, sframeCost, nframeCost, cframeCost = data.cal_repair(IDR, PFA)
-        # print(frameCost)
-        costOutput[i] = frameCost
-    # Output.append((edpOutput, costOutput))
-    # queue.put(Output)
+        RIDR = edpResult[7]
+        costOut_list, costOut_mean = data.costOut(IDR, PFA, RIDR, 1000, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep)
+        costOutput[i] = costOut_mean
 
     return costOutput

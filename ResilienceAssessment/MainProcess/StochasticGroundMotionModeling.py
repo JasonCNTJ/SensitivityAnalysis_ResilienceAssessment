@@ -12,7 +12,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-def StochasticGroundMotionModeling(M, R, Vs, whichone, num=1, tn=40, F=1):
+def StochasticGroundMotionModeling(M, R, Vs, F, num=1, tn=40):
     """
     :params M: magnitude;
     :params R: distance;
@@ -89,7 +89,8 @@ def StochasticGroundMotionModeling(M, R, Vs, whichone, num=1, tn=40, F=1):
         theta[:, i] = thetad['theta%i' % (i + 1)]
 
     # 取出第i组参数
-    i = whichone
+    # whichone = 0
+    i = 0
     theta_i = theta[i, :]
     
     # Known percentiles and values
