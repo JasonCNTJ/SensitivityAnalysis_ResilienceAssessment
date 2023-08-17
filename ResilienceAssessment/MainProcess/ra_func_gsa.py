@@ -103,7 +103,7 @@ def ResilienceAssessment(X):
     for i in range(nSample):
         print(i)
         # 传递传入的参数
-        M, R, V_s30, F, m_b, kesi, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep = X[i, :]
+        M, R, V_s30, F, m_b, kesi, P_nsq, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep = X[i, :]
         # 随机生成地震动
         ACC, tn = StochasticGroundMotionModeling(M, R, V_s30, F)
         # NTHA
@@ -112,11 +112,11 @@ def ResilienceAssessment(X):
         edpResult = NonlinearAnalysis(building, columns, beams, baseFile, ACC, dt, m_b, kesi)
         edpOutput[i, :] = edpResult
         # print(edpResult)
-        data = Data()
+        data = Data(P_nsq, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac)
         IDR = edpResult[:3]
         PFA = edpResult[3:7]
         RIDR = edpResult[7]
-        costOut_list, costOut_mean = data.costOut(IDR, PFA, RIDR, 1000, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep)
+        costOut_list, costOut_mean = data.costOut(IDR, PFA, RIDR, 1000, M_rf, S_rf, C_rep)
         costOutput[i] = costOut_mean
 
     return costOutput

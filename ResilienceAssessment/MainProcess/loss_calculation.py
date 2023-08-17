@@ -1,4 +1,5 @@
 from scipy.stats import lognorm
+from scipy.stats import norm
 import numpy as np
 
 
@@ -6,17 +7,26 @@ import numpy as np
 class Data:
     """
     """
-    def __init__(self):
+    def __init__(self, P_nsq, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac):
+        self.P_nsq = P_nsq
+        self.M_bcj = M_bcj
+        self.M_gcw = M_gcw
+        self.M_wp = M_wp
+        self.M_sc = M_sc
+        self.M_ele = M_ele
+        self.M_hvac = M_hvac
         self.componentData = {
             "1": {
-                'ID': 'B2022.001',
+                'ID': 'B2022.001',  # Curtain walls
                 'STORY': [1, 2, 3],
-                'UNIT': 108,
+                'UNIT': 216,
+                '50thp': 0.645,
+                'BETA': 0.6,
                 'EDP': 'PID',
                 'CT': 'N',
                 'DS_NUM': 2,
                 'DS1': {
-                    'MD': 0.0338,
+                    'MD': 0.0338 * self.M_gcw,
                     'DP': 0.4,
                     'LQ': 20,
                     'UQ': 100,
@@ -26,7 +36,7 @@ class Data:
                     'CV': 0.17
                 },
                 'DS2': {
-                    'MD': 0.0383,
+                    'MD': 0.0383 * self.M_gcw,
                     'DP': 0.4,
                     'LQ': 20,
                     'UQ': 100,
@@ -37,42 +47,16 @@ class Data:
                 },
             },
             "2": {
-                'ID': 'B3011.011',
+                'ID': 'C1011.001a',  # Wall partitions
                 'STORY': [1, 2, 3],
-                'UNIT': 69,
-                'EDP': 'PFA',
-                'CT': 'N',
-                'DS_NUM': 2,
-                'DS1': {
-                    'MD': 1.1,
-                    'DP': 0.4,
-                    'LQ': 13,
-                    'UQ': 130,
-                    'LRC': 840,
-                    'URC': 490,
-                    'DIS': 'Lognormal',
-                    'CV': 0.58
-                },
-                'DS2': {
-                    'MD': 1.4,
-                    'DP': 0.4,
-                    'LQ': 13,
-                    'UQ': 130,
-                    'LRC': 2220,
-                    'URC': 1180,
-                    'DIS': 'Lognormal',
-                    'CV': 0.31
-                },
-            },
-            "3": {
-                'ID': 'C1011.001a',
-                'STORY': [1, 2, 3],
-                'UNIT': 26,
+                'UNIT': 21.6,
+                '50thp': 0.001,
+                'BETA': 0.2,
                 'EDP': 'PID',
                 'CT': 'N',
                 'DS_NUM': 3,
                 'DS1': {
-                    'MD': 0.005,
+                    'MD': 0.005 * self.M_wp,
                     'DP': 0.4,
                     'LQ': 1,
                     'UQ': 10,
@@ -82,7 +66,7 @@ class Data:
                     'CV': 0.48
                 },
                 'DS2': {
-                    'MD': 0.01,
+                    'MD': 0.01 * self.M_wp,
                     'DP': 0.3,
                     'LQ': 1,
                     'UQ': 10,
@@ -92,7 +76,7 @@ class Data:
                     'CV': 0.56
                 },
                 'DS3': {
-                    'MD': 0.021,
+                    'MD': 0.021 * self.M_wp,
                     'DP': 0.2,
                     'LQ': 1,
                     'UQ': 10,
@@ -102,33 +86,17 @@ class Data:
                     'CV': 0.20
                 },
             },
-            "4": {
-                'ID': 'C3011.001a',
+            "3": {
+                'ID': 'C3032.001a',  # suspending ceiling
                 'STORY': [1, 2, 3],
-                'UNIT': 8,
-                'EDP': 'PID',
-                'CT': 'N',
-                'DS_NUM': 1,
-                'DS1': {
-                    'MD': 0.0021,
-                    'DP': 0.6,
-                    'LQ': 1,
-                    'UQ': 3,
-                    'LRC': 3240,
-                    'URC': 2160,
-                    'DIS': 'Lognormal',
-                    'CV': 0.15
-                },
-            },
-            "5": {
-                'ID': 'C3032.001a',
-                'STORY': [1, 2, 3],
-                'UNIT': 86,
+                'UNIT': 86.4,
+                '50thp': 1,
+                'BETA': 0.0,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 3,
                 'DS1': {
-                    'MD': 1.17,
+                    'MD': 1.17 * self.M_sc,
                     'DP': 0.25,
                     'LQ': 1,
                     'UQ': 10,
@@ -138,7 +106,7 @@ class Data:
                     'CV': 0.55
                 },
                 'DS2': {
-                    'MD': 1.58,
+                    'MD': 1.58 * self.M_sc,
                     'DP': 0.25,
                     'LQ': 1,
                     'UQ': 10,
@@ -148,7 +116,7 @@ class Data:
                     'CV': 0.52
                 },
                 'DS3': {
-                    'MD': 1.82,
+                    'MD': 1.82 * self.M_sc,
                     'DP': 0.25,
                     'LQ': 1,
                     'UQ': 10,
@@ -158,10 +126,32 @@ class Data:
                     'CV': 0.20
                 },
             },
-            "6": {
-                'ID': 'D2021.011a',
+            "4": {
+                'ID': 'C3027.002',  # raised access floor, seismically rated
                 'STORY': [1, 2, 3],
-                'UNIT': 2,
+                'UNIT': 162,
+                '50thp': 0.75,
+                'BETA': 0.2,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
+                'DS1': {
+                    'MD': 1.5,
+                    'DP': 0.4,
+                    'LQ': 5,
+                    'UQ': 20,
+                    'LRC': 138,
+                    'URC': 92,
+                    'DIS': 'Normal',
+                    'CV': 1.28
+                },
+            },
+            "5": {
+                'ID': 'D2021.011a',  # Cold or hot potable
+                'STORY': [1, 2, 3],
+                'UNIT': 0.91,
+                '50thp': 0.00004,
+                'BETA': 0.7,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 2,
@@ -186,15 +176,47 @@ class Data:
                     'CV': 0.41
                 },
             },
-            "7": {
-                'ID': 'D3041.011a',
+            "6": {
+                'ID': 'D3041.012a',  # HVAC galvanized sheet metal ducting>=6
                 'STORY': [1, 2, 3],
-                'UNIT': 1,
+                'UNIT': 0.43,
+                '50thp': 0.00002,
+                'BETA': 0.2,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 2,
                 'DS1': {
-                    'MD': 1.5,
+                    'MD': 1.5 * self.M_hvac,
+                    'DP': 0.4,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 1050,
+                    'URC': 855,
+                    'DIS': 'Lognormal',
+                    'CV': 0.26
+                },
+                'DS2': {
+                    'MD': 2.25 * self.M_hvac,
+                    'DP': 0.4,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 8750,
+                    'URC': 7160,
+                    'DIS': 'Lognormal',
+                    'CV': 0.08
+                },
+            },
+            "7": {
+                'ID': 'D3041.011a',  # HVAC galvanized sheet metal ducting<6
+                'STORY': [1, 2, 3],
+                'UNIT': 1.62,
+                '50thp': 0.000075,
+                'BETA': 0.2,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 2,
+                'DS1': {
+                    'MD': 1.5 * self.M_hvac,
                     'DP': 0.4,
                     'LQ': 1,
                     'UQ': 5,
@@ -204,7 +226,7 @@ class Data:
                     'CV': 0.37
                 },
                 'DS2': {
-                    'MD': 2.25,
+                    'MD': 2.25 * self.M_hvac,
                     'DP': 0.4,
                     'LQ': 1,
                     'UQ': 5,
@@ -215,14 +237,16 @@ class Data:
                 },
             },
             "8": {
-                'ID': 'D3041.031a',
+                'ID': 'D3041.031a',  # HVAC drops / diffusers
                 'STORY': [1, 2, 3],
-                'UNIT': 17,
+                'UNIT': 19.44,
+                '50thp': 0.009,
+                'BETA': 0.5,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 1,
                 'DS1': {
-                    'MD': 1.3,
+                    'MD': 1.3 * self.M_hvac,
                     'DP': 0.4,
                     'LQ': 1,
                     'UQ': 5,
@@ -233,14 +257,16 @@ class Data:
                 },
             },
             "9": {
-                'ID': 'D3041.041a',
+                'ID': 'D3041.041a',  # VAV box
                 'STORY': [1, 2, 3],
-                'UNIT': 9,
+                'UNIT': 10.8,
+                '50thp': 0.002,
+                'BETA': 0.2,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 1,
                 'DS1': {
-                    'MD': 1.9,
+                    'MD': 1.9 * self.M_hvac,
                     'DP': 0.4,
                     'LQ': 1,
                     'UQ': 5,
@@ -251,9 +277,31 @@ class Data:
                 },
             },
             "10": {
-                'ID': 'D4011.021a',
+                'ID': 'D3034.002',  # Independent pendant lighting
                 'STORY': [1, 2, 3],
-                'UNIT': 5,
+                'UNIT': 648,
+                '50thp': 0.015,
+                'BETA': 0.3,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
+                'DS1': {
+                    'MD': 1.5,
+                    'DP': 0.4,
+                    'LQ': 5,
+                    'UQ': 10,
+                    'LRC': 990,
+                    'URC': 297,
+                    'DIS': 'Lognormal',
+                    'CV': 0.64
+                },
+            },
+            "11": {
+                'ID': 'D4011.021a',  # fire sprinkler water piping
+                'STORY': [1, 2, 3],
+                'UNIT': 4.32,
+                '50thp': 0.01,
+                'BETA': 0.1,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 2,
@@ -278,10 +326,12 @@ class Data:
                     'CV': 0.41
                 },
             },
-            "11": {
-                'ID': 'D4011.031a',
+            "12": {
+                'ID': 'D4011.031a',  # fire sprinkler drop standard threaded steel
                 'STORY': [1, 2, 3],
-                'UNIT': 3,
+                'UNIT': 1.94,
+                '50thp': 0.009,
+                'BETA': 0.2,
                 'EDP': 'PFA',
                 'CT': 'N',
                 'DS_NUM': 2,
@@ -306,10 +356,12 @@ class Data:
                     'CV': 0.37
                 },
             },
-            "12": {
+            "13": {
                 'ID': 'C2011.001b',  # 楼梯
                 'STORY': [1, 2, 3],
-                'UNIT': 3,
+                'UNIT': 2.16,
+                '50thp': 0.0001,
+                'BETA': 0.2,
                 'EDP': 'PID',
                 'CT': 'N',
                 'DS_NUM': 3,
@@ -344,196 +396,196 @@ class Data:
                     'CV': 0.10
                 },
             },
-            "13": {
-                'ID': 'E2022.021',
-                'STORY': [1, 2, 3],
-                'UNIT': 20,
-                'EDP': 'PFA',
-                'CT': 'C',
-                'DS_NUM': 1,
-                'DS1': {
-                    'MD': 2.5,
-                    'DP': 0.5,
-                    'LQ': 10,
-                    'UQ': 50,
-                    'LRC': 150,
-                    'URC': 120,
-                    'DIS': 'Lognormal',
-                    'CV': 0.3
-                },
-            },
             "14": {
-                'ID': 'E2022.022',
+                'ID': 'D5012.021a',  # Low voltage switchgear
                 'STORY': [1, 2, 3],
-                'UNIT': 40,
+                'UNIT': 0.03,
+                '50thp': 0.0003,
+                'BETA': 0.4,
                 'EDP': 'PFA',
-                'CT': 'C',
+                'CT': 'N',
                 'DS_NUM': 1,
                 'DS1': {
-                    'MD': 1,
-                    'DP': 0.5,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 1500,
-                    'URC': 1200,
+                    'MD': 1.28,
+                    'DP': 0.4,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 10200,
+                    'URC': 8350,
                     'DIS': 'Lognormal',
-                    'CV': 0.35
+                    'CV': 0.16
                 },
             },
             "15": {
-                'ID': 'E2022.102b',
-                'STORY': [1, 2, 3],
-                'UNIT': 40,
+                'ID': 'D1014.011-1',  # TRACTION ELEVATOR-ds1
+                'STORY': [1],
+                'UNIT': 1.81,
+                '50thp': 0.000028,
+                'BETA': 0.7,
                 'EDP': 'PFA',
-                'CT': 'C',
+                'CT': 'N',
                 'DS_NUM': 1,
                 'DS1': {
-                    'MD': 0.8,
-                    'DP': 0.4,
-                    'LQ': 10,
-                    'UQ': 50,
-                    'LRC': 300,
-                    'URC': 250,
+                    'P': 0.26,
+                    'MD': 0.39 * self.M_ele,
+                    'DP': 0.45,
+                    'LQ': 5,
+                    'UQ': 10,
+                    'LRC': 8800,
+                    'URC': 2640,
                     'DIS': 'Lognormal',
-                    'CV': 0.3
+                    'CV': 0.87
                 },
             },
             "16": {
-                'ID': 'E2022.020',
-                'STORY': [1, 2, 3],
-                'UNIT': 50,
+                'ID': 'D1014.011-2',  # TRACTION ELEVATOR-ds2
+                'STORY': [1],
+                'UNIT': 1.81,
+                '50thp': 0.000028,
+                'BETA': 0.7,
                 'EDP': 'PFA',
-                'CT': 'C',
+                'CT': 'N',
                 'DS_NUM': 1,
                 'DS1': {
-                    'MD': 1,
-                    'DP': 0.4,
-                    'LQ': 20,
-                    'UQ': 100,
-                    'LRC': 200,
-                    'URC': 160,
-                    'DIS': 'Lognormal',
-                    'CV': 0.3
+                    'P': 0.79,
+                    'MD': 0.39 * self.M_ele,
+                    'DP': 0.45,
+                    'LQ': 5,
+                    'UQ': 10,
+                    'LRC': 37400,
+                    'URC': 11200,
+                    'DIS': 'Normal',
+                    'CV': 0.28
                 },
             },
             "17": {
-                'ID': 'B1031.001',
-                'STORY': [1, 2, 3],
-                'UNIT': 8,
-                'EDP': 'PID',
-                'CT': 'S',
-                'DS_NUM': 3,
+                'ID': 'D1014.011-3',  # TRACTION ELEVATOR-ds3
+                'STORY': [1],
+                'UNIT': 1.81,
+                '50thp': 0.000028,
+                'BETA': 0.7,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
                 'DS1': {
-                    'MD': 0.04,
-                    'DP': 0.4,
+                    'P': 0.68,
+                    'MD': 0.39 * self.M_ele,
+                    'DP': 0.45,
                     'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 16536,
-                    'URC': 10176,
+                    'UQ': 10,
+                    'LRC': 32000,
+                    'URC': 9600,
                     'DIS': 'Normal',
-                    'CV': 0.37
-                },
-                'DS2': {
-                    'MD': 0.08,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 15564,
-                    'URC': 11025,
-                    'DIS': 'Normal',
-                    'CV': 0.38
-                },
-                'DS3': {
-                    'MD': 0.11,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 15264,
-                    'URC': 10812,
-                    'DIS': 'Normal',
-                    'CV': 0.38
+                    'CV': 0.41
                 },
             },
             "18": {
-                'ID': 'B1031.011a',
+                'ID': 'D1014.011-4',  # TRACTION ELEVATOR-ds4
                 'STORY': [1],
-                'UNIT': 4,
-                'EDP': 'PID',
-                'CT': 'S',
-                'DS_NUM': 3,
+                'UNIT': 1.81,
+                '50thp': 0.000028,
+                'BETA': 0.7,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
                 'DS1': {
-                    'MD': 0.04,
-                    'DP': 0.4,
+                    'P': 0.17,
+                    'MD': 0.39 * self.M_ele,
+                    'DP': 0.45,
                     'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 1270,
-                    'URC': 780,
-                    'DIS': 'Lognormal',
-                    'CV': 0.41
-                },
-                'DS2': {
-                    'MD': 0.07,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 31500,
-                    'URC': 22300,
-                    'DIS': 'Lognormal',
-                    'CV': 0.37
-                },
-                'DS3': {
-                    'MD': 0.1,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 36700,
-                    'URC': 26000,
-                    'DIS': 'Lognormal',
-                    'CV': 0.34
+                    'UQ': 10,
+                    'LRC': 5000,
+                    'URC': 1500,
+                    'DIS': 'Normal',
+                    'CV': 0.49
                 },
             },
             "19": {
-                'ID': 'B1031.011b',
+                'ID': 'D3031.011a',  # chiller
                 'STORY': [1],
-                'UNIT': 8,
-                'EDP': 'PID',
-                'CT': 'S',
-                'DS_NUM': 3,
+                'UNIT': 2.46,
+                '50thp': 0.00285,
+                'BETA': 0.1,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
                 'DS1': {
-                    'MD': 0.04,
+                    'MD': 0.2 * self.M_hvac,
                     'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 1320,
-                    'URC': 810,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 50800,
+                    'URC': 41600,
                     'DIS': 'Lognormal',
-                    'CV': 0.39
-                },
-                'DS2': {
-                    'MD': 0.07,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 33900,
-                    'URC': 24000,
-                    'DIS': 'Lognormal',
-                    'CV': 0.34
-                },
-                'DS3': {
-                    'MD': 0.1,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 20,
-                    'LRC': 41500,
-                    'URC': 29400,
-                    'DIS': 'Lognormal',
-                    'CV': 0.31
+                    'CV': 0.18
                 },
             },
             "20": {
-                'ID': 'B1031.011c',
+                'ID': 'D3031.021a',  # cooling tower
+                'STORY': [3],
+                'UNIT': 2.46,
+                '50thp': 0.00285,
+                'BETA': 0.1,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
+                'DS1': {
+                    'MD': 0.5 * self.M_hvac,
+                    'DP': 0.4,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 26100,
+                    'URC': 21300,
+                    'DIS': 'Lognormal',
+                    'CV': 0.17
+                },
+            },
+            "21": {
+                'ID': 'D3052.011a',  # air handling unit 3?
+                'STORY': [1, 2, 3],
+                'UNIT': 3.78,
+                '50thp': 0.7,
+                'BETA': 0.2,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
+                'DS1': {
+                    'MD': 0.25 * self.M_hvac,
+                    'DP': 0.4,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 11330,
+                    'URC': 9282,
+                    'DIS': 'Lognormal',
+                    'CV': 0.16
+                },
+            },
+            "22": {
+                'ID': 'D5012.013a',  # motor control center
                 'STORY': [1],
-                'UNIT': 8,
+                'UNIT': 2.59,
+                '50thp': 4E-05,
+                'BETA': 0.5,
+                'EDP': 'PFA',
+                'CT': 'N',
+                'DS_NUM': 1,
+                'DS1': {
+                    'MD': 0.73,
+                    'DP': 0.45,
+                    'LQ': 1,
+                    'UQ': 5,
+                    'LRC': 4570,
+                    'URC': 3740,
+                    'DIS': 'Normal',
+                    'CV': 0.18
+                },
+            },
+            "23": {
+                'ID': 'B1031.011c',  # steel column base plates
+                'STORY': [1],
+                'UNIT': 20,
+                '50thp': 1,
+                'BETA': 0,
                 'EDP': 'PID',
                 'CT': 'S',
                 'DS_NUM': 3,
@@ -568,156 +620,164 @@ class Data:
                     'CV': 0.27
                 },
             },
-            "21": {
-                'ID': 'B1035.042',
+            "24": {
+                'ID': 'B1035.002',  # PN RBS >=30 ONE SIDE
                 'STORY': [1, 2],
                 'UNIT': 8,
+                '50thp': 1,
+                'BETA': 0,
                 'EDP': 'PID',
                 'CT': 'S',
                 'DS_NUM': 3,
                 'DS1': {
-                    'MD': 0.017,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 15700,
-                    'URC': 10400,
-                    'DIS': 'Normal',
-                    'CV': 0.36
-                },
-                'DS2': {
-                    'MD': 0.025,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 18400,
-                    'URC': 12225,
-                    'DIS': 'Lognormal',
-                    'CV': 0.37
-                },
-                'DS3': {
-                    'MD': 0.03,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 17500,
-                    'URC': 11600,
-                    'DIS': 'Lognormal',
-                    'CV': 0.34
-                },
-            },
-            "22": {
-                'ID': 'B1035.052',
-                'STORY': [1, 2],
-                'UNIT': 8,
-                'EDP': 'PID',
-                'CT': 'S',
-                'DS_NUM': 3,
-                'DS1': {
-                    'MD': 0.017,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 21550,
-                    'URC': 14400,
-                    'DIS': 'Normal',
-                    'CV': 0.36
-                },
-                'DS2': {
-                    'MD': 0.025,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 28750,
-                    'URC': 19150,
-                    'DIS': 'Normal',
-                    'CV': 0.35
-                },
-                'DS3': {
-                    'MD': 0.03,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 28700,
-                    'URC': 19100,
+                    'MD': 0.03 * self.M_bcj,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 23000,
+                    'URC': 15600,
                     'DIS': 'Normal',
                     'CV': 0.33
                 },
+                'DS2': {
+                    'MD': 0.04 * self.M_bcj,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 40500,
+                    'URC': 27500,
+                    'DIS': 'Normal',
+                    'CV': 0.28
+                },
+                'DS3': {
+                    'MD': 0.05 * self.M_bcj,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 40500,
+                    'URC': 27500,
+                    'DIS': 'Lognormal',
+                    'CV': 0.28
+                },
             },
-            "23": {
-                'ID': 'B1035.041',
-                'STORY': [3],
-                'UNIT': 8,
+            "25": {
+                'ID': 'B1035.012',  # PN RBS >=30 BOTH SIDE
+                'STORY': [1, 2],
+                'UNIT': 12,
+                '50thp': 1,
+                'BETA': 0,
                 'EDP': 'PID',
                 'CT': 'S',
                 'DS_NUM': 3,
                 'DS1': {
-                    'MD': 0.017,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 14950,
-                    'URC': 9937.5,
+                    'MD': 0.03,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 40000,
+                    'URC': 27200,
+                    'DIS': 'Normal',
+                    'CV': 0.31
+                },
+                'DS2': {
+                    'MD': 0.04,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 73100,
+                    'URC': 49700,
+                    'DIS': 'Normal',
+                    'CV': 0.25
+                },
+                'DS3': {
+                    'MD': 0.05,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 73100,
+                    'URC': 49700,
+                    'DIS': 'Normal',
+                    'CV': 0.25
+                },
+            },
+            "26": {
+                'ID': 'B1035.001',  # PN RBS <=27 ONE SIDE
+                'STORY': [3],
+                'UNIT': 8,
+                '50thp': 1,
+                'BETA': 0,
+                'EDP': 'PID',
+                'CT': 'S',
+                'DS_NUM': 3,
+                'DS1': {
+                    'MD': 0.03,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 21800,
+                    'URC': 14800,
                     'DIS': 'Normal',
                     'CV': 0.35
                 },
                 'DS2': {
-                    'MD': 0.025,
-                    'DP': 0.4,
+                    'MD': 0.04,
+                    'DP': 0.3,
                     'LQ': 5,
                     'UQ': 30,
-                    'LRC': 18400,
-                    'URC': 12225,
-                    'DIS': 'Lognormal',
-                    'CV': 0.37
-                },
-                'DS3': {
-                    'MD': 0.03,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 17500,
-                    'URC': 11600,
-                    'DIS': 'Lognormal',
-                    'CV': 0.34
-                },
-            },
-            "24": {
-                'ID': 'B1035.051',
-                'STORY': [3],
-                'UNIT': 8,
-                'EDP': 'PID',
-                'CT': 'S',
-                'DS_NUM': 3,
-                'DS1': {
-                    'MD': 0.017,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 21550,
-                    'URC': 14400,
-                    'DIS': 'Normal',
-                    'CV': 0.36
-                },
-                'DS2': {
-                    'MD': 0.025,
-                    'DP': 0.4,
-                    'LQ': 5,
-                    'UQ': 30,
-                    'LRC': 24250,
-                    'URC': 16150,
+                    'LRC': 36600,
+                    'URC': 24900,
                     'DIS': 'Normal',
                     'CV': 0.31
                 },
                 'DS3': {
-                    'MD': 0.03,
-                    'DP': 0.4,
+                    'MD': 0.05,
+                    'DP': 0.3,
                     'LQ': 5,
                     'UQ': 30,
-                    'LRC': 22700,
-                    'URC': 15100,
+                    'LRC': 36600,
+                    'URC': 24900,
+                    'DIS': 'Normal',
+                    'CV': 0.31
+                },
+            },
+            "27": {
+                'ID': 'B1035.011',  # PN RBS <=27 BOTH SIDE
+                'STORY': [3],
+                'UNIT': 12,
+                '50thp': 1,
+                'BETA': 0,
+                'EDP': 'PID',
+                'CT': 'S',
+                'DS_NUM': 3,
+                'DS1': {
+                    'MD': 0.03,
+                    'DP': 0.3,
+                    'LQ': 3,
+                    'UQ': 7,
+                    'LRC': 37500,
+                    'URC': 25500,
                     'DIS': 'Normal',
                     'CV': 0.33
+                },
+                'DS2': {
+                    'MD': 0.04,
+                    'DP': 0.3,
+                    'LQ': 5,
+                    'UQ': 30,
+                    'LRC': 65400,
+                    'URC': 44500,
+                    'DIS': 'Normal',
+                    'CV': 0.28
+                },
+                'DS3': {
+                    'MD': 0.05,
+                    'DP': 0.3,
+                    'LQ': 5,
+                    'UQ': 30,
+                    'LRC': 65400,
+                    'URC': 44500,
+                    'DIS': 'Normal',
+                    'CV': 0.28
                 },
             },
         }
@@ -747,7 +807,7 @@ class Data:
     # calculate interpolated cost for number of components
     def cal_interp(self, index, ds):
         comp = self.componentData['%s' % index]
-        unit = comp['UNIT']
+        unit = comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
         lq = comp['DS%s' % ds]['LQ']
         uq = comp['DS%s' % ds]['UQ']
         lrc = comp['DS%s' % ds]['LRC']
@@ -851,54 +911,63 @@ class Data:
                 if ds == 1:
                     singleCost = self.cal_interp(index, 1)
                     randomCost = self.get_random_comp_cost(index, 1, singleCost, nRepair)
-                    compCost = randomCost * comp['UNIT']
+                    compCost = randomCost * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                 if ds == 2:
                     singleCost = self.cal_interp(index, 2)
                     randomCost = self.get_random_comp_cost(index, 2, singleCost, nRepair)
-                    compCost = randomCost * comp['UNIT']
+                    compCost = randomCost * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                 if ds == 3:
                     singleCost = self.cal_interp(index, 3)
                     randomCost = self.get_random_comp_cost(index, 3, singleCost, nRepair)
-                    compCost = randomCost * comp['UNIT']
+                    compCost = randomCost * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
             else:
-                if ds == 1:
+                if index >= 15 and index <= 18:
                     nNoZero = int(pds[0] / 100 * nRepair)
                     if nNoZero != 0:
                         singleCost = self.cal_interp(index, 1)
                         randomCost = self.get_random_comp_cost(index, 1, singleCost, nNoZero)
-                        compCost[:nNoZero] = randomCost * comp['UNIT']
+                        compCost[:nNoZero] = randomCost * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                     np.random.shuffle(compCost)  # 混排
+                    compCost = compCost * comp['DS1']['P']
+                else:
+                    if ds == 1:
+                        nNoZero = int(pds[0] / 100 * nRepair)
+                        if nNoZero != 0:
+                            singleCost = self.cal_interp(index, 1)
+                            randomCost = self.get_random_comp_cost(index, 1, singleCost, nNoZero)
+                            compCost[:nNoZero] = randomCost * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        np.random.shuffle(compCost)  # 混排
 
-                if ds == 2:
-                    nNoZero1 = int(pds[0] / 100 * nRepair)
-                    if nNoZero1 != 0:
-                        singleCost1 = self.cal_interp(index, 1)
-                        randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
-                        compCost[:nNoZero1] = randomCost1 * comp['UNIT']
-                    nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
-                    if nNoZero2 != 0:
-                        singleCost2 = self.cal_interp(index, 2)
-                        randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
-                        compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
-                    np.random.shuffle(compCost)  # 混排
+                    if ds == 2:
+                        nNoZero1 = int(pds[0] / 100 * nRepair)
+                        if nNoZero1 != 0:
+                            singleCost1 = self.cal_interp(index, 1)
+                            randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
+                            compCost[:nNoZero1] = randomCost1 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
+                        if nNoZero2 != 0:
+                            singleCost2 = self.cal_interp(index, 2)
+                            randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
+                            compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        np.random.shuffle(compCost)  # 混排
 
-                if ds == 3:
-                    nNoZero1 = int(pds[0] / 100 * nRepair)
-                    if nNoZero1 != 0:
-                        singleCost1 = self.cal_interp(index, 1)
-                        randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
-                        compCost[:nNoZero1] = randomCost1 * comp['UNIT']
-                    nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
-                    if nNoZero2 != 0:
-                        singleCost2 = self.cal_interp(index, 2)
-                        randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
-                        compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT']
-                    nNoZero3 = int((pds[2] - pds[1]) / 100 * nRepair)
-                    if nNoZero3 != 0:
-                        singleCost3 = self.cal_interp(index, 3)
-                        randomCost3 = self.get_random_comp_cost(index, 3, singleCost3, nNoZero3)
-                        compCost[nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT']
-                    np.random.shuffle(compCost)   # 混排
+                    if ds == 3:
+                        nNoZero1 = int(pds[0] / 100 * nRepair)
+                        if nNoZero1 != 0:
+                            singleCost1 = self.cal_interp(index, 1)
+                            randomCost1 = self.get_random_comp_cost(index, 1, singleCost1, nNoZero1)
+                            compCost[:nNoZero1] = randomCost1 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        nNoZero2 = int((pds[1] - pds[0]) / 100 * nRepair)
+                        if nNoZero2 != 0:
+                            singleCost2 = self.cal_interp(index, 2)
+                            randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
+                            compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        nNoZero3 = int((pds[2] - pds[1]) / 100 * nRepair)
+                        if nNoZero3 != 0:
+                            singleCost3 = self.cal_interp(index, 3)
+                            randomCost3 = self.get_random_comp_cost(index, 3, singleCost3, nNoZero3)
+                            compCost[nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                        np.random.shuffle(compCost)   # 混排
         else:
             compCost = np.zeros(nRepair)
 
@@ -962,7 +1031,7 @@ class Data:
 
         return frameCost, sframeCost, nframeCost, cframeCost
 
-    def costOut(self, IDR, PFA, RIDR, nSample, P_nsq, Q_con, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep):
+    def costOut(self, IDR, PFA, RIDR, nSample, M_rf, S_rf, C_rep):
         """
         :param IDR: 层间位移角
         :param PFA: 峰值层加速度
