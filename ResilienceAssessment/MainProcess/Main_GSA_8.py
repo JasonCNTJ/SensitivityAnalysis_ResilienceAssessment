@@ -24,16 +24,23 @@ if __name__ == "__main__":
     })
 
     (
-        sp.sample_sobol(2)
+        sp.sample_sobol(2, calc_second_order=False)
         .evaluate(ra.ResilienceAssessment, nprocs=16)
-        .analyze_sobol()
+        .analyze_sobol(calc_second_order=False)
     )
     # 采样和运行结果存储
-    np.savetxt("samples.txt", sp.samples)
-    np.savetxt("results.txt", sp.results)
-    
+    np.savetxt("samples0820.txt", sp.samples)
+    np.savetxt("results0820.txt", sp.results)
+    # 存储计算结果
+    sp_data = sp.to_df()
+    # 打开文件
+    with open('sp_output0820.txt', 'w') as file:
+        # 将列表中的元素逐行写入文件
+        for item in sp_data:
+            file.write(str(item) + '\n')
+    # 关闭文件
+    file.close()
     end_time = time.time()  # 记录结束时间
     elapsed_time = end_time - start_time  # 计算时间差
-    
     print('计算时间为', elapsed_time, 's')
     print(sp)

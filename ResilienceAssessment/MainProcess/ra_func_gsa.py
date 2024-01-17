@@ -12,7 +12,9 @@ from column_component import Column
 from steel_material import SteelMaterial
 from nonlinear_analysis import NonlinearAnalysis
 # module for seismic consequence evaluation
-from loss_calculation import Data
+# from loss_calculation import Data
+from loss_calculation_multioutput import Data
+import os
 
 
 def ResilienceAssessment(X):
@@ -35,6 +37,7 @@ def ResilienceAssessment(X):
     :return: Output
     """
     # BASE INFORMATION
+    os.chdir('c:\\Users\\12734\\OneDrive\\重要文件\\2_SensitivityAnalysis\\Sensitivity-PythonCode\\sensitivity-code')
     cwdFile = pathlib.Path.cwd()
     cwdFile = cwdFile / 'ResilienceAssessment' / 'MainProcess'
     print(cwdFile)
@@ -94,29 +97,38 @@ def ResilienceAssessment(X):
         columns[story][pier] = Column(csection_size['size'], axial_demand, Lx, Ly, steel, SectionDatabase)
     nSample, D = X.shape
     baseFile = cwdFile
-    nSample = 1
+    # nSample = 1
     edpOutput = np.empty((nSample, 8))
     costOutput = np.empty(nSample)  # results
     # np.random.seed(seed)  # 设置随机种子
     # np.random.seed(1)  # 确保结果可以复现
     # Output = []
     for i in range(nSample):
-        print(i)
+        # print(i)
         # 传递传入的参数
         M, R, V_s30, F, m_b, kesi, P_nsq, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac, M_rf, S_rf, C_rep = X[i, :]
         # 随机生成地震动
         ACC, tn = StochasticGroundMotionModeling(M, R, V_s30, F)
         # NTHA
         dt = 0.01
+        dt = tn
         ACC = ACC.tolist()
-        edpResult = NonlinearAnalysis(building, columns, beams, baseFile, ACC, dt, m_b, kesi)
+        edpResult, T1 = NonlinearAnalysis(building, columns, beams, baseFile, ACC, dt, m_b, kesi)
         edpOutput[i, :] = edpResult
         # print(edpResult)
+        P_nsq = 0.99
         data = Data(P_nsq, M_bcj, M_gcw, M_wp, M_sc, M_ele, M_hvac)
         IDR = edpResult[:3]
         PFA = edpResult[3:7]
         RIDR = edpResult[7]
-        costOut_list, costOut_mean = data.costOut(IDR, PFA, RIDR, 1000, M_rf, S_rf, C_rep)
+        _, costOut_mean = data.costOut(IDR, PFA, RIDR, 1000, M_rf, S_rf, C_rep)
         costOutput[i] = costOut_mean
+        # 监控进程
+        try:
+            if i % 10 == 0:
+                with open('process_monitor.txt', 'w') as f:
+                    f.write(str(i))
+        except Exception:
+            pass
 
     return costOutput

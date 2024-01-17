@@ -25,8 +25,7 @@ if __name__ == '__main__':
     queue = mp.Queue()
     # 创建进程并执行任务
     procs = []
-    np.random.seed(1)
-    # ? 是否需要加上不重复？
+    # np.random.seed(1)
     for i in range(16):
         # seed = np.random.randint(1000)  # 生成不同的随机种子
         proc = mp.Process(target=ra.ResilienceAssessment, args=(queue,))

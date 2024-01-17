@@ -9,7 +9,7 @@ from scipy.stats import gamma
 from scipy.optimize import minimize
 import math
 from scipy.integrate import odeint
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def StochasticGroundMotionModeling(M, R, Vs, F, num=1, tn=40):
@@ -32,7 +32,11 @@ def StochasticGroundMotionModeling(M, R, Vs, F, num=1, tn=40):
         sigma = pickle.load(file)
         corr = pickle.load(file)
 
-    #  求解p
+    if F >= 0.5:
+        F = 1
+    else:
+        F = 0
+    #  求解 p
     sigma2 = sigma[:, 0]**2 + sigma[:, 1]**2
     sigma2_sqrt = np.sqrt(sigma2)
     stv_m = np.diag(sigma2_sqrt)
@@ -117,7 +121,7 @@ def StochasticGroundMotionModeling(M, R, Vs, F, num=1, tn=40):
     np.seterr(divide='ignore', invalid='ignore')
 
     # 生成加速度时程
-    tn = 40
+    tn = 60
     ti = np.arange(0.01, tn + 0.01, 0.01)
     kesi_f = theta_i[5]
     dt = 0.01
@@ -158,7 +162,7 @@ def StochasticGroundMotionModeling(M, R, Vs, F, num=1, tn=40):
     wc = 0.1 * 2 * np.pi
     ACC = x - 2 * wc * sol[:, 1] - wc**2 * sol[:, 0]
 
-    return ACC, tn
+    return ACC, tn, theta_i
 
 
 if __name__ == '__main__':

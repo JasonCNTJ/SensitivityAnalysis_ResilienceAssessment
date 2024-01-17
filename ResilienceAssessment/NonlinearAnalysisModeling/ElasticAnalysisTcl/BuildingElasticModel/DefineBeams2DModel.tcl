@@ -2,9 +2,9 @@
 
 
 # Define beam section sizes 
-set	BeamLevel2	[SectionProperty W27X94]; 
-set	BeamLevel3	[SectionProperty W33X130]; 
-set	BeamLevel4	[SectionProperty W33X130]; 
+set	BeamLevel2	[SectionProperty W24X62]; 
+set	BeamLevel3	[SectionProperty W24X62]; 
+set	BeamLevel4	[SectionProperty W21X44]; 
 
 
 # Define beams 

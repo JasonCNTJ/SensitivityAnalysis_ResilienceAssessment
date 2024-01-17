@@ -950,6 +950,7 @@ class Data:
                             randomCost2 = self.get_random_comp_cost(index, 2, singleCost2, nNoZero2)
                             compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                         np.random.shuffle(compCost)  # 混排
+                        # print(compCost)
 
                     if ds == 3:
                         nNoZero1 = int(pds[0] / 100 * nRepair)
@@ -964,9 +965,12 @@ class Data:
                             compCost[nNoZero1:nNoZero1 + nNoZero2] = randomCost2 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                         nNoZero3 = int((pds[2] - pds[1]) / 100 * nRepair)
                         if nNoZero3 != 0:
+                            nNoZeroA = nNoZero1 + nNoZero2 + nNoZero3
+                            if nNoZeroA >= nRepair:
+                                nNoZero3 = nRepair - nNoZero1 - nNoZero2
                             singleCost3 = self.cal_interp(index, 3)
                             randomCost3 = self.get_random_comp_cost(index, 3, singleCost3, nNoZero3)
-                            compCost[nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
+                            compCost[nNoZero1 + nNoZero2:nNoZero1 + nNoZero2 + nNoZero3] = randomCost3 * comp['UNIT'] / comp['50thp'] * np.exp(np.log(comp['50thp']) + comp['BETA'] * norm.ppf(self.P_nsq))
                         np.random.shuffle(compCost)   # 混排
         else:
             compCost = np.zeros(nRepair)

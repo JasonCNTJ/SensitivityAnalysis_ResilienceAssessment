@@ -374,7 +374,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, ke
     FrameTributaryMassRatio = 1.0 / building.geometry['number of X LFRS']
     TotalNodesPerFloor = n_Xbay + 2
     for i in range(2, n_story + 2):
-        FloorWeight = building.gravity_loads['floor weight'][i-2]
+        FloorWeight = building.gravity_loads['floor weight'][i-2] * m_b
         # Mass along X direction
         NodalMassFloor = FloorWeight * FrameTributaryMassRatio / TotalNodesPerFloor / g
         
@@ -537,7 +537,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, ke
     # ops.recorder('Node', '-file', 'node1411.txt', '-timeSeries', 2, '-node', 1411,
     #          '-dof', 1, 'accel')
     
-    nPts = 4001
+    nPts = 6001 + 1500
     tFinal = nPts * dt
     tCurrent = ops.getTime()
     ok = 0
@@ -575,7 +575,7 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, ke
         a2.append(ops.nodeAccel(1311, 1))
         a1.append(ops.nodeAccel(1211, 1))
         a0.append(ops.nodeAccel(1110, 1))
-    print('Analysis Completed!')
+    # print('Analysis Completed!')
 
     U0 = np.array(u0)
     U1 = np.array(u1)
@@ -586,8 +586,8 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, ke
     A1 = np.array(a1)
     A2 = np.array(a2)
     A3 = np.array(a3)
-    time_original = np.arange(0, 40.01, 0.01)
-    time_new = np.arange(0, 40.012, 0.001)
+    time_original = np.arange(0, tFinal, dt)  # 修改！！！！
+    time_new = np.arange(0, tFinal+0.002, 0.001)
     gmlist = np.interp(time_new, time_original, accvalues)
     gmlist = np.array(gmlist)
     A00 = gmlist + A0 / g
@@ -613,4 +613,4 @@ def NonlinearAnalysis(building, columns, beams, baseFile, accvalues, dt, m_b, ke
 
     # assemble the result to output vector
     EDP_Result = np.array([IDR1_MAX, IDR2_MAX, IDR3_MAX, Amax0, Amax1, Amax2, Amax3, Residual_idr])
-    return EDP_Result
+    return EDP_Result, T1

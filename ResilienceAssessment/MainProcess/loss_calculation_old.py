@@ -809,7 +809,7 @@ class Data:
             ]
             pds1 = round(perList[1] * 100)
             pds2 = pds1 + round(perList[2] * 100)
-            pds3 = pds2 + round(perList[3])
+            pds3 = pds2 + round(perList[3] * 100)
             pds = [pds1, pds2, pds3]
         else:
             perList = []
